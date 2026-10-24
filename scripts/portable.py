@@ -9,6 +9,11 @@ from pathlib import Path
 import re
 import shutil
 import sys
+import fcntl
+import socket
+import subprocess
+import tempfile
+from contextlib import contextmanager
 
 ROOT = Path(__file__).resolve().parents[1]
 HERE = ROOT / 'rank2_feature_graph'
@@ -144,7 +149,7 @@ def copy_file(source, destination):
         shutil.copy2(source, destination)
 
 
-def prepare(package, metadata_path, output):
+def prepare(package, metadata_path, output, announce=True):
     if output.exists():
         raise ValueError('Choose a new output folder; existing copies are never overwritten')
     original = package_manifest(package)
@@ -229,11 +234,139 @@ def prepare(package, metadata_path, output):
     (output / 'Start VME.command').chmod(0o755)
     receipt = dict(sourceSha256=source_digest(HERE), baseManifestSha256=sha(encoded(original)),
                    metadataSha256=sha(metadata_path.read_bytes()), dataPackage=str(package),
+                   metadataFile=str(metadata_path),
                    datasets=list(manifest['seed']['distributionDatasets']), application=manifest['application'],
                    diagnosticCount=len(metadata['embeddingStressDiagnostics']))
     (output / 'SOURCE_AND_DATA.json').write_text(json.dumps(receipt, indent=2) + '\n')
-    (output / 'READ ME FIRST.txt').write_text('Double-click Start VME.command. Keep its Terminal open.\nThis copy uses current GitHub interface source with your separately supplied data.\nNo fitting or data changes occurred. Port: 43818.\nFor another update: git pull --ff-only in the clone, then rerun prepare with a new output folder.\nThe original data package stays unchanged. SOURCE_AND_DATA.json records both identities.\n')
-    print('Ready: ' + str(output / 'Start VME.command'))
+    (output / 'READ ME FIRST.txt').write_text('Double-click Start VME.command. Keep its Terminal open.\nThis copy uses current GitHub interface source with your separately supplied data.\nNo fitting or data changes occurred. Port: 43818.\nFor another update: stop this viewer, then in ~/vme-source run git pull --ff-only followed by python3 scripts/portable.py update.\nThe original data package stays unchanged. SOURCE_AND_DATA.json records both identities.\n')
+    if announce:
+        print('Ready: ' + str(output / 'Start VME.command'))
+
+
+@contextmanager
+def update_lock(output):
+    """Serialize updates without leaving a stale lock after a process exits."""
+    with (output.parent / ('.' + output.name + '-update.lock')).open('a') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise ValueError('Another update is running for ' + str(output)) from None
+        yield
+
+
+@contextmanager
+def stopped_viewer(output):
+    """Reserve the launch port and reject this app running on another port."""
+    processes = subprocess.check_output(['/bin/ps', '-ww', '-axo', 'command='], text=True)
+    for line in processes.splitlines():
+        arguments = line.partition('vme-server ')[2].rsplit(' ', 1)
+        if (len(arguments) == 2 and arguments[1].isdigit()
+                and Path(arguments[0]).resolve() == (output / 'web').resolve()):
+            raise ValueError('Stop the viewer with Control-C in its Terminal before updating')
+    port = int(os.environ.get('VME_PORT', '43818'))
+    if not 1024 <= port <= 65535:
+        raise ValueError('VME_PORT must be between 1024 and 65535')
+    with socket.socket() as reservation:
+        try:
+            reservation.bind(('127.0.0.1', port))
+        except OSError:
+            raise ValueError(f'Port {port} is in use. Stop the viewer before updating') from None
+        yield
+
+
+def validate_prepared(output):
+    """Re-read the finished candidate, including newly generated script bytes."""
+    web = output / 'web'
+    manifest = read_manifest(web / 'index.html')
+    for desc in descriptors(manifest):
+        checked_bytes(web, desc)
+    html = (web / 'index.html').read_text()
+    loaders = re.findall(r'<script src="(/vme-assets/([a-f0-9]{64})\.js)"></script>', html)
+    if not loaders:
+        raise ValueError('Prepared viewer has no loader')
+    for url, digest in loaders:
+        raw = (web / url.lstrip('/')).read_bytes()
+        checked_bytes(web, dict(url=url, sha256=digest, bytes=len(raw)))
+    receipt = json.loads((output / 'SOURCE_AND_DATA.json').read_text())
+    if receipt['application'] != manifest['application']:
+        raise ValueError('Prepared application receipt differs')
+    if not re.fullmatch('[a-f0-9]{64}', (web / 'vme-instance.txt').read_text()):
+        raise ValueError('Prepared viewer identity is invalid')
+    if not os.access(output / 'vme-server', os.X_OK):
+        raise ValueError('Prepared native server is not executable')
+    subprocess.run(['/bin/bash', '-n', str(output / 'Start VME.command')], check=True)
+
+
+def recover_update(output, journal):
+    """Recover a replacement interrupted between moving the old and new app."""
+    if not journal.exists():
+        return
+    record = json.loads(journal.read_text())
+    name = record['transaction']
+    if Path(name).name != name or not name.startswith(output.name + '-update-'):
+        raise ValueError('Invalid update recovery record: ' + str(journal))
+    transaction = output.parent / name
+    if transaction.is_symlink() or (transaction / 'previous').is_symlink():
+        raise ValueError('Update recovery paths must not be symbolic links')
+    previous = transaction / 'previous'
+    if not output.exists() and record['hadPrevious']:
+        if not previous.is_dir():
+            raise ValueError('Previous app is missing; inspect ' + str(transaction))
+        previous.rename(output)
+        print('Recovered previous app: ' + str(output))
+    journal.unlink()
+
+
+def update(package=None, metadata_path=None, output=None):
+    output = Path(output or Path.home() / 'vme').expanduser().absolute()
+    if output.is_symlink():
+        raise ValueError('The app folder must not be a symbolic link')
+    output = output.resolve()
+    # Reject the source checkout before creating any locks or staging folders.
+    if output == ROOT or output in ROOT.parents or ROOT in output.parents:
+        raise ValueError('Keep the source clone in ~/vme-source and the app in ~/vme')
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with update_lock(output), stopped_viewer(output):
+        journal = output.parent / ('.' + output.name + '-update.json')
+        recover_update(output, journal)
+        old_receipt = {}
+        if output.exists():
+            if (output / '.git').exists() or not (output / 'SOURCE_AND_DATA.json').is_file():
+                raise ValueError('Existing output is not a prepared VME app; it will not be replaced')
+            old_receipt = json.loads((output / 'SOURCE_AND_DATA.json').read_text())
+            if not all((output / name).is_file() for name in ('vme-server', 'Start VME.command', 'web/index.html')):
+                raise ValueError('Existing app is incomplete; inspect it before updating')
+        package = Path(package or old_receipt.get('dataPackage') or
+                       Path.home() / 'Downloads/VME-Mac-Meeting-2026-10-23').expanduser().resolve()
+        metadata_path = Path(metadata_path or old_receipt.get('metadataFile') or
+                             Path.home() / 'Downloads/VME-metadata-2026-10-24.json').expanduser().resolve()
+        if (output == package or output in package.parents or package in output.parents
+                or output == metadata_path or output in metadata_path.parents):
+            raise ValueError('Keep the original data package and metadata outside the app folder')
+        transaction = Path(tempfile.mkdtemp(prefix=output.name + '-update-', dir=output.parent))
+        candidate, previous = transaction / 'candidate', transaction / 'previous'
+        try:
+            prepare(package, metadata_path, candidate, announce=False)
+            validate_prepared(candidate)
+            # Write recovery information before either directory is moved.
+            with journal.open('x') as stream:
+                json.dump(dict(transaction=transaction.name, hadPrevious=output.exists()), stream)
+                stream.flush()
+                os.fsync(stream.fileno())
+            if output.exists():
+                output.rename(previous)
+            candidate.rename(output)
+            journal.unlink()
+        except BaseException:
+            if previous.exists() and not output.exists():
+                previous.rename(output)
+                if journal.exists():
+                    journal.unlink()
+            print('Update did not finish. Diagnostic files retained at: ' + str(transaction), file=sys.stderr)
+            raise
+        print('Ready: ' + str(output / 'Start VME.command'))
+        if previous.exists():
+            print('Previous app retained at: ' + str(previous))
 
 
 def main():
@@ -245,13 +378,19 @@ def main():
         item.add_argument('--output', type=Path, required=True)
         if command == 'prepare':
             item.add_argument('--metadata', type=Path, required=True)
+    item = sub.add_parser('update', help='Safely install or replace ~/vme using the current source checkout')
+    item.add_argument('--package', type=Path, help='Original data package (remembered after setup)')
+    item.add_argument('--metadata', type=Path, help='Metadata supplement (remembered after setup)')
+    item.add_argument('--output', type=Path, default=Path.home() / 'vme')
     args = parser.parse_args()
     try:
-        if args.command == 'prepare':
+        if args.command == 'update':
+            update(args.package, args.metadata, args.output)
+        elif args.command == 'prepare':
             prepare(args.package.resolve(), args.metadata.resolve(), args.output.resolve())
         else:
             export_metadata(args.package.resolve(), args.output.resolve())
-    except (ValueError, KeyError, OSError) as error:
+    except (ValueError, KeyError, OSError, subprocess.SubprocessError) as error:
         parser.exit(1, 'VME setup: ' + str(error) + '\n')
 
 

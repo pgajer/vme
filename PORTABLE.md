@@ -31,22 +31,29 @@ account or collaborator invitation is required for this read-only download:
 
 ```sh
 cd "$HOME"
-git clone https://github.com/pgajer/vme.git
-cd vme
+git clone https://github.com/pgajer/vme.git "$HOME/vme-source"
+cd "$HOME/vme-source"
 ```
 
 If you already have this clone, enter it and run `git pull --ff-only` instead.
-From inside the `vme` folder, run:
+Keep the source clone in `~/vme-source` and the runnable app in `~/vme`.
+If the earlier instructions put the source clone in `~/vme` (or `~/VME`),
+rename that clone to `vme-source` first; do not replace a clone with the app.
+On typical Macs, capitalization does not distinguish two folder names.
+
+From inside the `vme-source` folder, run:
 
 ```sh
-python3 scripts/portable.py prepare \
+python3 scripts/portable.py update \
   --package "$HOME/Downloads/VME-Mac-Meeting-2026-10-23" \
   --metadata "$HOME/Downloads/VME-metadata-2026-10-24.json" \
-  --output "$HOME/VME-2026-10-24"
+  --output "$HOME/vme"
 ```
 
-Use the actual paths if the files are stored elsewhere. The output folder must
-not already exist. Open it in Finder and double-click **Start VME.command**.
+Use the actual input paths if the files are stored elsewhere. The same command
+installs the app initially or safely updates an existing prepared app. Stop the
+viewer with **Control-C in its Terminal** before updating. Open `~/vme` in Finder
+and double-click **Start VME.command**.
 Keep its Terminal window open while exploring. The new copy uses
 `http://127.0.0.1:43818/`; the original October 23 launcher uses port 43817.
 Stop another copy on port 43818 before starting a different update. Browser
@@ -57,13 +64,15 @@ HMP+U01 (40-participant panel), ZAPPS & PreSSMat, or Li / Lc neighborhoods.
 Both V3–V4 and V4 neighborhood collections remain available.
 
 If setup reports a missing package, check the unzipped folder name and paths.
-If the output folder already exists, choose a new output name. A checksum or
-metadata mismatch means the files do not form the expected package; contact
-Pawel for the matching files rather than changing or bypassing the checks.
+An existing source clone or unrelated output folder will not be replaced.
+A checksum or metadata mismatch means the files do not form the expected
+package; contact Pawel for the matching files rather than changing or bypassing
+the checks.
 
 The setup verifies dataset assets against their SHA-256 hashes and binds the
 metadata supplement to this exact package and its saved embedding coordinates.
-It creates a new viewer folder and leaves the original package unchanged.
+It builds and validates a separate candidate before replacing the app, and
+leaves the original package unchanged.
 On the same filesystem it uses hard links for immutable assets; otherwise it
 copies them. Treat both copies' data files as read-only. No remote downloads or
 scientific calculations run during setup.
@@ -75,17 +84,37 @@ replace sample observations, memberships, fitted paths, or embedding coordinates
 
 ## Later interface updates
 
-In the source clone:
+Stop the running viewer with Control-C in its Terminal, then run:
 
 ```sh
-git pull --ff-only
+cd "$HOME/vme-source"
+git pull --ff-only && python3 scripts/portable.py update
 ```
 
-Run the same `prepare` command with a new output directory, retaining the data
-package and metadata supplement. A data revision or incompatible metadata format
-requires a separately supplied new package or supplement. Preparation errors
-identify mismatches; do not bypass them. `SOURCE_AND_DATA.json` in each prepared
-viewer records its source, data-manifest, metadata, and application hashes.
+This updates the source first and installs the resulting viewer at `~/vme`.
+The app remembers the data-package and metadata paths from setup, so keep those
+files in place. To change them, supply `--package` and `--metadata` again.
+Reopen `~/vme/Start VME.command` and reload an already open browser tab. Keeping
+the same port preserves browser preferences and saved views.
+
+The updater refuses concurrent updates and a running viewer. It validates the
+candidate's data, generated scripts, receipt, and launcher before replacing the
+app. A failed build leaves the old app in place; a failed replacement restores
+it. If a process is killed between the two directory moves, the next update
+recovers the previous app before attempting another build.
+
+Each successful replacement keeps the old app under the printed
+`~/vme-update-<unique-id>/previous` path. Failed candidates and diagnostic files
+are retained in their own `vme-update-<unique-id>` folders. These folders are never removed automatically and can
+use additional disk space. To restore an earlier copy manually, first stop VME,
+move the current `~/vme` to another unused name, and move the chosen `previous`
+folder back to `~/vme`. Do not delete the original data package.
+
+A data revision or incompatible metadata format requires a separately supplied
+new package or supplement. Preparation errors identify mismatches; do not bypass
+them. `SOURCE_AND_DATA.json` in each prepared viewer records source, data,
+metadata, and application identities. The older `prepare` command remains
+available for creating an independent copy in a new folder.
 
 Fitted paths are off by default. A saved view that explicitly enabled them still
 restores that choice. The optional live R density service is not included. The
