@@ -1,0 +1,4 @@
+* -text
+# The original VMRC palette CSVs retain their original CRLF line endings.
+rank2_feature_graph/palettes/16S_taxaKey.csv whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rank2_feature_graph/palettes/VIRGO2_taxaKey.csv whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

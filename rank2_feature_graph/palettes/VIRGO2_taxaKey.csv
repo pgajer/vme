@@ -1,0 +1,54 @@
+Taxa,Michael_original_Color,Text,Color
+Lactobacillus_crispatus,#db4848,ND L. crispatus,#FDCC45
+C0022A1,#ff8c00,C0022A1,#F7931E
+C0059E1,#ff738a,C0059E1,#F6881F
+C0175A1,#a30049,C0175A1,#F15A24
+FF00018,#0000cd,FF00018,#F57C20
+FF00051,#27465e,FF00051,#F37122
+UC101,#7278ab,UC101,#F26523
+122010,#7fff00,122010,#71220B
+185329,#3cb371,185329,#63200C
+C0006A1,#ff0000,C0006A1,#D63200
+C0028A1,#de9ae3,C0028A1,#C83002
+C0112A1,#fffb29,C0112A1,#B92E03
+FF00004,#333333,FF00004,#AB2B05
+FF00064,#20b2aa,FF00064,#9D2906
+FF00072,#c1ffc1,FF00072,#8E2708
+UC119,#184224,UC119,#802509
+Lactobacillus_iners,#ff8c00,L. iners,#00CD00
+Gardnerella_vaginalis,#20b2aa,G. vaginalis ,#1E90FF
+Gardnerella_swidsinskii,#58e0d9,G. swidsinkii,#104E8B
+Aerococcus_christensenii,#616161,A. christensenii,#616161
+Fannyhessea_vaginae,#0000cd,F. vaginae,#0000cd
+Berryella_sp001552935,#ff00d9,B. sp001552935,#ff00d9
+Bifidobacterium_breve,#c1ffc1,B. breve,#c1ffc1
+UBA629_sp005465875,#6e0f00,Ca. L. vaginae,#EE7AE9
+KA00274_sp902373515,#3bb16f,A. indicium,#9b99e0
+Dialister_sp001553355,#045c47,D. sp001553355,#182336
+Gardnerella,#99b0af,Gardnerella,#1D8AF4
+Gardnerella_leopoldii,#bbeff2,G. leopoldii,#1B84EA
+Gardnerella_piotii,#409490,G. piotii,#1872CA
+Gardnerella_sp003585845,#05ebdf,G. sp003585845,#1E99FF
+Gardnerella_vaginalis_A,#085e5a,G. vaginalis A,#166CC0
+Gardnerella_vaginalis_C,#1acad6,G. vaginalis C,#1566B5
+Gardnerella_vaginalis_D,#2b7572,G. vaginalis D,#1460AB
+Gardnerella_vaginalis_E,#6accc7,G. vaginalis E,#135AA0
+Gardnerella_vaginalis_F,#00494f,G. vaginalis F,#115496
+Gardnerella_vaginalis_H,#146c73,G. vaginalis H,#104E8B
+Lactobacillus_gasseri,#86bf4d,L. gasseri,#86bf4d
+Lactobacillus_jensenii,#333333,L. jensenii,#008B00
+Lactobacillus_mulieris,#a16060,L. mulieris,#528552
+Lactobacillus_paragasseri,#0d4018,L. paragasseri,#0d4018
+Megasphaera_lornae,#008B45,M. lornae,#767596
+Mobiluncus_mulieris,#f08080,M. mulieris,#f08080
+Nanoperiomorbus_sp004136275,#613b1a,N. sp004136275,#613b1a
+Prevotella,#7d7d7d,Prevotella,#621EA0
+Prevotella_amnii,#ac8fc7,P. amnii,#9B30FF
+Prevotella_bivia,#c997cc,P. bivia,#551A8B
+Prevotella_sp000758925,#6c6e45,P. sp000758925,#952EF4
+Prevotella_spNov3,#684a6b,P. spNov3,#6820AB
+Prevotella_timonensis,#f8fca9,P. timonensis,#7B26CA
+Sneathia_vaginalis,#6963ff,S. vaginalis,#6963ff
+Streptococcus_anginosus,#ffbaf8,S. anginosus,#ffbaf8
+Streptococcus_mitis,#c771ba,S. mitis,#c771ba
+other,#8c8c8c,Other,#8c8c8c
