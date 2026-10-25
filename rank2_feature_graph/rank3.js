@@ -125,7 +125,7 @@ function rank3Geometry(g,lookup){
  }
  return {g:{...g,nodes:[...nodes.values()]},lookup:coords,faces,supplemental};
 }
-function graphGeometry(){return rank3Geometry(displayedGraph(),graphLayoutCoordinates())}
+function graphGeometry(){return degreeFilteredGeometry(rank3Geometry(displayedGraph(),graphLayoutCoordinates()))}
 function graphNodeLabelVisible(n){return !edgeFacesActive()||!n.supplemental||edgeFaces.checked.some(id=>rank3Base().byId.get(id)?.features.includes(n.id))}
 function graphNodeLabel(n){return n.maximum===undefined?n.label+' [supplementary]':`${n.label} (${fmt(n.maximum)}%)`}
 function rank3Traces(geometry){

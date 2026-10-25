@@ -21,13 +21,27 @@ function createDatasetPanelStorage(storage,identity){
    }catch{return null}
   },
   setItem(key,value){const scoped=keyFor(key);memory.set(scoped,String(value));try{storage.setItem(scoped,String(value))}catch{}},
-  removeItem(key){const scoped=keyFor(key);memory.set(scoped,null);try{storage.removeItem(scoped)}catch{}}
+  removeItem(key){const scoped=keyFor(key);memory.set(scoped,null);try{storage.removeItem(scoped)}catch{}},
+  resetGraphFading(){
+   const keys=new Set(memory.keys());let updated=0,failed=0;
+   try{for(let i=0;i<storage.length;i++)keys.add(storage.key(i))}catch{failed++}
+   for(const key of keys){
+    if(key!=='vme-panel-controls-v1'&&!/^vme-dataset-panels-v1:[^:]+:vme-panel-controls-v1$/.test(key))continue;
+    try{
+     const saved=JSON.parse(memory.has(key)?memory.get(key):storage.getItem(key));
+     if(saved?.version!==1||!saved.controls||typeof saved.controls!=='object')continue;
+     saved.controls.graphFadeBySize=true;saved.controls.graphFadeStrength='0.1';
+     const value=JSON.stringify(saved);storage.setItem(key,value);memory.set(key,value);updated++;
+    }catch{failed++}
+   }
+   return {updated,failed};
+  }
  };
 }
 const datasetPanelNativeStorage=(()=>{try{return typeof window==='undefined'?localStorage:window.localStorage}catch{return null}})();
 const datasetPanelStorage=createDatasetPanelStorage(datasetPanelNativeStorage,()=>{try{return activeEmbeddingFamily?.id||META.id}catch{return META.id}});
 let datasetPanelReady=false,datasetPanelRestoring=false,datasetPanelLayout=null,datasetPanelControlDefaults=null,datasetPanelDetailDefaults=null;
-const datasetPanelControlIds=['dimension','vertexLabels','graphFadeBySize','graphFadeStrength','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
+const datasetPanelControlIds=['dimension','vertexLabels','graphFadeBySize','graphFadeStrength','graphDegreeFilter','graphMinimumDegree','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
 function panelReadJson(key,fallback){try{return JSON.parse(datasetPanelStorage.getItem(key))??fallback}catch{return fallback}}
 function panelControlSnapshot(){return Object.fromEntries(datasetPanelControlIds.map(id=>[id,el(id).type==='checkbox'?el(id).checked:el(id).value]))}
 function saveDatasetPanelSettings(){
@@ -64,6 +78,7 @@ function restoreDatasetPanelSettings(){
   }
   // Clamp legacy strengths to the current slider range; preserve saved on/off choices.
   setGraphFadeStrength(valid&&saved.controls?.graphFadeStrength!==undefined?saved.controls.graphFadeStrength:valid&&saved.controls?.graphFadeBySize===true ? .25 : .1);
+  restoreGraphDegreeSettings({enabled:valid&&saved.controls?.graphDegreeFilter===true,minimum:valid?saved.controls?.graphMinimumDegree:2});
   participant.axis=valid&&saved.composition?.axis==='elapsed'?'elapsed':'visit';
   for(const k of ['allTaxa','catalogue','stateBackground'])participant[k]=valid&&typeof saved.composition?.[k]==='boolean'?saved.composition[k]:k==='stateBackground';
   if(valid&&['id','key','label','frequency','length'].includes(saved.catalogueSort?.key)&&typeof saved.catalogueSort?.descending==='boolean')catalogueSort={...saved.catalogueSort};else catalogueSort={key:'id',descending:false};

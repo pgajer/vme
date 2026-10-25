@@ -882,7 +882,7 @@ function participantGraphEdgeTraces(g,lookup,project=null){
 }
 function participantGraphSelected(lookup){
  const selected=participantGraphModel()?.points.get(participant.record);if(!selected||selected.u===null)return null;
- const e=current().edges.find(e=>e.id===selected.id),a=lookup.get(e.from),b=lookup.get(e.to);if(!a||!b)return null;
+ const e=current().edges.find(e=>e.id===selected.id);if(!e||!degreeFilteredGraph(current()).edges.some(edge=>edge.id===e.id))return null;const a=lookup.get(e.from),b=lookup.get(e.to);if(!a||!b)return null;
  return {xyz:a.map((v,j)=>v+(b[j]-v)*selected.u),text:`${esc(selected.p.r.label)} · ${esc(e.label)}<br>${selected.p.placement?'Categorical endpoint placement':'Position within reference pair interval'}<br>Not whole-sample abundance`,id:e.id};
 }
 function participantGraphMarker(lookup){
