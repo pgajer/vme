@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const ids=['overview','global','local','reference','maxnorm-euclidean','maxnorm-linf'];
+const elements=new Map();
+const el=id=>{if(!elements.has(id))elements.set(id,{value:'overview',options:ids.map(value=>({value})),textContent:''});return elements.get(id)};
+const context=vm.createContext({el,console,Math,Number,Map,Set,WeakMap});
+const run=s=>vm.runInContext(s,context);
+run(`let META={id:'comb-V3V4-tx',revision:'base'},activeSensitivityMode='rebuilt',preferredSampleEmbedding='local';
+let participant={active:false},rank=false,candidate=false,pure=false;
+const rank3UsesSamples=()=>rank,candidateActive=()=>candidate,pureCoverageActive=()=>pure;
+const BUNDLE_PACK={combDisplay:{revision:'rebuilt'},maxNormalizedEmbeddings:{baseRevision:'base',sensitivityRevision:'rebuilt',revision:'new',profiles:[3,7],views:{
+ 'maxnorm-euclidean':{label:'Max-normalized · Euclidean',metric:'euclidean',coordinates:[[0,0,0],[1,0,0]],evaluation:{relativeRms:0,pairs:1,profiles:2,sampled:false},solver:{pivots:2,seed:17,starts:1,epochs:200}},
+ 'maxnorm-linf':{label:'Max-normalized · L∞',metric:'linf',coordinates:[[0,1,0],[0,0,0]],evaluation:{relativeRms:0,pairs:1,profiles:2,sampled:false},solver:{pivots:2,seed:17,starts:1,epochs:200}}}}};
+let DATA={records:[{profile:7},{profile:3},{profile:7}]};`);
+for(const name of ['embedding_stress.js','max_normalized_views.js'])run(fs.readFileSync(new URL(name,import.meta.url),'utf8'));
+run('syncMaxNormalizedControls()');
+assert.equal(el('sampleEmbedding').options[4].disabled,false);
+el('sampleEmbedding').value='maxnorm-euclidean';
+assert.equal(JSON.stringify(run('maxNormalizedCoordinates()')),JSON.stringify([[1,0,0],[0,0,0],[1,0,0]]),'Map by profile identity, preserving duplicate records');
+el('sampleEmbedding').value='maxnorm-linf';assert.equal(JSON.stringify(run('maxNormalizedCoordinates()[0]')),'[0,0,0]');
+assert.equal(run("stressDistance([[0,.8],[1,.2]],[[0,.1],[1,.4]],'maxnorm_linf')"),.75);
+assert.ok(Math.abs(run("stressDistance([[0,.8],[1,.2]],[[0,.1],[1,.4]],'maxnorm_euclidean')")-Math.hypot(.75,.75))<1e-14);
+assert.equal(run("stressDistance([[0,2]],[[0,7]],'maxnorm_linf')"),0,'Max normalization is scale invariant');
+run("maxNormalizedStress([{profile:3,xyz:[0,1,0]},{profile:7,xyz:[0,0,0]}],[[[0,1]],[[1,1]]])");
+assert.equal(run("embeddingStressDetails.get('sampleStress').result.sampled"),false);
+assert.throws(()=>run("maxNormalizedStress([{profile:3,xyz:[9,9,9]},{profile:7,xyz:[0,0,0]}],[[[0,1]],[[1,1]]])"),/Displayed coordinates differ/);
+run("maxNormalizedStress([{profile:3,xyz:[0,1,0]}],[[[0,1]]])");
+assert.equal(run("embeddingStressDetails.get('sampleStress').result.relativeRms"),null,'Never substitute the full-population score for an empty pair set');
+run("activeSensitivityMode='baseline';syncMaxNormalizedControls()");
+assert.equal(el('sampleEmbedding').options[4].hidden,true);assert.equal(el('sampleEmbedding').value,'overview');
+run("activeSensitivityMode='rebuilt';participant.active=true;syncMaxNormalizedControls()");assert.equal(el('sampleEmbedding').options[5].disabled,true);
+run("participant.active=false;DATA={records:[{profile:999}]}");el('sampleEmbedding').value='maxnorm-linf';
+assert.throws(()=>run('maxNormalizedCoordinates()'),/do not cover/);
+// The ordinary overview must retain a selected new metric through selectionControls.
+const html=fs.readFileSync(new URL('viewer.html',import.meta.url),'utf8');
+run(html.slice(html.indexOf('function selectionControls(){'),html.indexOf('function inspectBase(){')));
+run(`DATA={referenceCoords:[]}; const hasSelection=()=>false,localSelectionFit=()=>null,syncSampleSelectors=()=>{}; const selectionHistory=[],selectionFuture=[];`);
+run('selectionControls()');assert.equal(el('sampleEmbedding').value,'maxnorm-linf');
+run(html.slice(html.indexOf('function viewCoordinates(){'),html.indexOf('function selectionReferences(')));
+run("DATA={records:[{profile:7},{profile:3}],referenceCoords:[[99,99,99],[99,99,99]],samples:{coords:[]}}");
+assert.equal(JSON.stringify(run('viewCoordinates()[0]')),'[0,0,0]','New views must not silently reuse reference coordinates');
+assert.ok(run('globalViewDescription()').includes('L∞'));
+run("const savedView={dataset:'comb-V3V4-tx',datasetRevision:'base',populationComparison:'rebuilt',maxNormalizedRevision:'new',selection:{embedding:'maxnorm-linf',selected:null,selectedVertex:null}};validateMaxNormalizedNamedView(savedView)");
+assert.throws(()=>run("validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'old'})"),/matching rebuilt-reference/);
+assert.throws(()=>run("validateMaxNormalizedNamedView({...savedView,populationComparison:'baseline'})"),/matching rebuilt-reference/);
+console.log('Max-normalized view tests passed: identity mapping, metrics, evaluation scope, availability, selection persistence.');

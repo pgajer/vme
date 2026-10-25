@@ -52,3 +52,8 @@
 !/scripts/test_portable.py
 
 !/rank2_feature_graph/test_sample_appearance.mjs
+
+!/rank2_feature_graph/max_normalized_views.js
+!/rank2_feature_graph/test_max_normalized_views.mjs
+!/scripts/max_normalized_supplement.py
+!/scripts/test_max_normalized_supplement.py

@@ -86,7 +86,7 @@ function restoreDatasetPanelSettings(){
   rank3={enabled:false,mode:'count',threshold:50,basis:'reference',color:'rank3',background:false,selected:[],vertex:null};
   if(valid&&saved.rank3){try{const r={...saved.rank3,selected:[],vertex:null};validateRank3View(r);rank3=r}catch{rank3.enabled=false}}
   // Overview is a display state, not a valid preference for a selected group.
-  preferredSampleEmbedding=['local','global','reference'].includes(el('sampleEmbedding').value)?el('sampleEmbedding').value:'local';
+  preferredSampleEmbedding=['local','global','reference',...maxNormalizedIds].includes(el('sampleEmbedding').value)?el('sampleEmbedding').value:'local';
   rank3Colors=panelReadJson('vme-rank3-colors-v1',{});if(!rank3Colors||typeof rank3Colors!=='object'||Array.isArray(rank3Colors))rank3Colors={};
   const details={...datasetPanelDetailDefaults,...panelReadJson('vme-panel-details-v1',{})};
   for(const [id,v] of Object.entries(details)){const node=document.getElementById(id);if(node?.tagName==='DETAILS'&&typeof v==='boolean')node.open=v}

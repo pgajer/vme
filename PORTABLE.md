@@ -135,3 +135,44 @@ Share the generated JSON through the same controlled channel as the data. It
 contains research-derived summaries and diagnostics and does not belong in the
 source repository. Existing output files are never replaced. Validate an update
 against a source-only checkout and the previously delivered package before sharing.
+
+## Optional max-normalized rebuilt-reference views
+
+A separately supplied metadata supplement can add **Max-normalized · Euclidean**
+and **Max-normalized · L∞** to the Sample embedding menu for comb-V3V4-tx's
+**Rebuilt reference** population. The source update alone does not contain these
+coordinates. Install the matching supplement once:
+
+```sh
+python3 scripts/portable.py update --metadata /path/to/VME-metadata-maxnorm.json
+```
+
+Later `python3 scripts/portable.py update` calls remember that file. The original
+views remain available. Both new views use fixed full-population coordinates;
+cohort, state and vertex selections restrict those coordinates without fitting
+a local embedding. Reference diamonds use the same coordinate system. Participant
+joint views, top-3 geometry and pure-state comparison tools retain their existing
+embeddings. The graph layout and state assignments do not change.
+
+Each composition is divided by its largest abundance before computing Euclidean
+or maximum-coordinate-difference (L∞) targets. The error label uses those targets,
+counts each distinct profile once, and excludes reference markers. It shows the
+verified exact error when all fitted profiles are displayed, and a reproducible
+sampled estimate (or exact calculation for small sets) for filtered displays.
+Three-dimensional proximity is an approximation; use original-space distances
+for nearest-neighbor analysis. Existing exploratory eligibility holds remain.
+
+Maintainers can package verified fits without refitting or changing the base data:
+
+```sh
+python3 scripts/max_normalized_supplement.py \
+  --results /path/to/verified-analysis-results \
+  --package /path/to/original-data-package \
+  --metadata /path/to/existing-metadata.json \
+  --output /path/to/new-metadata-maxnorm.json
+```
+
+The exporter checks record/profile identities, coordinate values, exact-evaluation
+checksums and solver provenance. Setup additionally binds the supplement to the
+base dataset, rebuilt population and composition matrix. Outputs remain private
+data supplements under their own access and reuse terms, excluded from MIT.

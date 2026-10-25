@@ -158,6 +158,11 @@ def prepare(package, metadata_path, output, announce=True):
     validate_metadata(metadata, original, package_views(web, original))
     manifest = copy.deepcopy(original)
     manifest['seed'].update({k: metadata[k] for k in ('legendAbundanceTotals', 'embeddingStressDiagnostics')})
+    if metadata.get('maxNormalizedEmbeddings'):
+        from max_normalized_supplement import population, validate
+        validate(metadata['maxNormalizedEmbeddings'], population(package, original),
+                 original['datasets']['comb-V3V4-tx']['dataset']['revision'])
+        manifest['seed']['maxNormalizedEmbeddings'] = metadata['maxNormalizedEmbeddings']
     # Validate all scientific asset bytes before creating an output directory.
     retained = copy.deepcopy(original)
     for key in ('application', 'validator'):

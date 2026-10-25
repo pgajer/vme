@@ -9,14 +9,15 @@ function stressPairs(n,limit=20000,seed=embeddingStressSeed){
 }
 function stressDistance(a,b,metric='abundance_euclidean',anchor=null){
  let i=0,j=0,sum=0;const ratio=metric.includes('ratio'),root=metric==='sqrt_ratio_euclidean',hell=metric==='hellinger',js=metric==='jensen_shannon';
- const ar=ratio?a.find(v=>v[0]===anchor)?.[1]:1,br=ratio?b.find(v=>v[0]===anchor)?.[1]:1;
+ const maximum=metric.startsWith('maxnorm_'),infinity=metric==='maxnorm_linf';
+ const ar=maximum?Math.max(...a.map(v=>v[1])):ratio?a.find(v=>v[0]===anchor)?.[1]:1,br=maximum?Math.max(...b.map(v=>v[1])):ratio?b.find(v=>v[0]===anchor)?.[1]:1;
  if(!(ar>0&&br>0))throw Error('Reference abundance is zero in ratio coordinates.');
  while(i<a.length||j<b.length){const ai=a[i]?.[0]??Infinity,bj=b[j]?.[0]??Infinity,k=Math.min(ai,bj);let u=ai===k?a[i++][1]:0,v=bj===k?b[j++][1]:0;
-  if(ratio){u/=ar;v/=br}
+  if(ratio||maximum){u/=ar;v/=br}
   if(js){if(u>0)sum+=u*Math.log2(2*u/(u+v));if(v>0)sum+=v*Math.log2(2*v/(u+v))}
-  else{if(root||hell){u=Math.sqrt(u);v=Math.sqrt(v)}sum+=(u-v)**2}
+  else{if(root||hell){u=Math.sqrt(u);v=Math.sqrt(v)}sum=infinity?Math.max(sum,Math.abs(u-v)):sum+(u-v)**2}
  }
- return Math.sqrt(Math.max(0,sum/(hell||js?2:1)));
+ return infinity?sum:Math.sqrt(Math.max(0,sum/(hell||js?2:1)));
 }
 function evaluateEmbeddingStress(rows,coords,{metric='abundance_euclidean',anchor=null,scale=1,limit=20000}={}){
  if(rows.length!==coords.length||!(scale>0))throw Error('Coordinate and target identities differ.');
@@ -49,6 +50,7 @@ function renderSampleStress(){
   }
   const ordered=[...points].sort((a,b)=>a[0]-b[0]).map(([,p])=>p),rows=ordered.map(p=>compositions[p.profile]);
   if(rows.some(r=>!r))throw Error('Full target compositions are missing for some displayed profiles; no partial-population score is substituted.');
+  if(typeof maxNormalizedStress==='function'&&maxNormalizedStress(ordered,rows))return;
   const key=JSON.stringify([META.id,bundle.dataset.revision,asset?.matrixSha256||supplement.provenance.matrixSha256,ordered]);
   const result=cachedEmbeddingStress(key,()=>evaluateEmbeddingStress(rows,ordered.map(p=>p.xyz)));
   setEmbeddingStress('sampleStress',result,'Target: original full-composition Euclidean distance. Population: displayed profile identities, including visible background once; reference markers and repeated records at the same profile are excluded. Filtering changes this evaluation population; it does not refit the embedding.');
