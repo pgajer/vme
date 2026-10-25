@@ -1,29 +1,39 @@
 # Vaginal Microbiome Explorer
 
-Interactive browser views of human vaginal microbial communities.
+Vaginal Microbiome Explorer (VME) is an interactive application for exploring
+the composition of human vaginal microbial communities and their variation
+across samples, cohorts, and participants over time.
 
-The original VME software and documentation use the [MIT License](LICENSE).
-Separately distributed datasets and metadata supplements are excluded; see
-[licensing scope](LICENSING.md) and [third-party notices](THIRD_PARTY_NOTICES.md).
+VME connects sample embeddings, graphs of phylotypes and community states,
+composition summaries, and participant trajectories. Selecting a state or
+phylotype links these views, helping users examine the samples behind a pattern.
 
-See [CITATION.cff](CITATION.cff) for the software citation. Cite research datasets
-separately according to their providers' guidance.
+- **Explore samples in 3D.** Inspect community structure, compare available
+  reference and local embeddings, and color samples by community state or
+  dataset-specific annotations. Sample counts, percentages, and embedding
+  distortion measures provide context for the display.
+- **Examine community-state graphs.** View phylotypes as vertices and top-2
+  community state types (CSTs) as edges. Inspect connections, sample coverage,
+  and vertex characteristics; filter by degree or adjust fading to reveal
+  less common states. Top-3 CSTs can also be displayed where available.
+- **Follow participant trajectories.** Trace successive visits through
+  community states and inspect changing phylotype abundances in stacked bars.
+  Adjustable abundance thresholds highlight the phylotypes accounting for
+  a chosen share of each sample.
+- **Compare populations.** Explore dataset-specific cohorts, pure states,
+  merged groups, and reference populations while retaining their distinct
+  sample definitions and study context.
+- **Save and share views.** Customize colors and layouts, save named views,
+  and export figures and tables for further examination.
 
-This repository contains the viewer runtime and setup tools. Research datasets,
-saved embeddings, and metadata supplements are supplied separately by their
-maintainer. A source download alone contains no sample data.
+A top-k CST groups samples by the unordered set of their k most abundant
+phylotypes. VME also supports other classifications, including VALENCIA2 CSTs
+and subCSTs where supplied by a dataset.
 
-See [setup and updates](PORTABLE.md) to reuse the October 23, 2026 Mac data
-package with the current interface. Setup requires Python 3.9 or later and no
-additional Python packages. The prepared viewer runs offline on macOS 11+.
+Available views depend on the dataset and its accompanying metadata and saved
+embeddings. Research datasets and metadata supplements are distributed
+separately; this repository contains the application source, not sample data.
 
-Scientific preparation scripts and reports are maintained separately. Existing
-dataset release limits remain in effect. The viewer does not refit embeddings.
-
-Checks that do not require research data:
-
-```sh
-python3 -m unittest discover -s scripts -p test_portable.py
-node rank2_feature_graph/test_embedding_stress.mjs
-node rank2_feature_graph/test_asset_loader.mjs
-```
+If you use VME in your research, please cite the software using
+[CITATION.cff](CITATION.cff). Cite research datasets separately according to
+their providers' guidance.
