@@ -550,7 +550,7 @@ function renderSamplePlot(traces,layout,config){
   const references=annotations.some(referenceLabel)||traces.some(t=>t.meta?.referenceVertices);
   syncSampleAppearanceControls(references);
   traces=traces.map(t=>{
-   if(t.meta?.referenceVertices)return {...t,mode:participant.showVertices?'markers+text':'markers',textfont:{...t.textfont,size:participant.vertexLabelSize}};
+   if(t.meta?.referenceVertices)return {...t,visible:participant.showVertices,textfont:{...t.textfont,size:participant.vertexLabelSize}};
    if(!t.meta?.sampleView||!t.marker||t.meta.edgeFaceRings)return t;
    const size=Array.isArray(t.marker.size)?t.marker.size.map(n=>n*participant.sampleSize/2):participant.sampleSize;
    return {...t,marker:{...t.marker,size,opacity:participant.sampleOpacity,...(!participant.sampleColors?{color:'#a8adb2'}:{})}};
@@ -685,7 +685,7 @@ function installControlHelp(){
   participantSelectedLabelOnly:'Label only the observation selected in the trajectory, visit selector or sample plot.',
   participantShowArrows:'Show arrowheads indicating observation order along visible visit lines.',
   participantEmbeddingMode:'Joint 3D fits all cohort samples assigned to any state occupied by this subject, using full compositions and the main Pure/Merged selection. Full reference retains the earlier embedding. Fits stay fixed across visits and are saved separately.',
-  participantShowVertices:'Show or hide names at the reference compositions supplied for the current sample view. Reference markers and hover information remain available.',
+  participantShowVertices:'Show or hide reference diamonds and their labels together. Ordinary sample points at the same compositions remain visible.',
   participantVertexLabelSize:'Size of reference taxon labels in the sample plot. Remembered in this browser.',
   participantArrowScale:'100% uses the original arrowhead size, scaled to each visit segment. Remembered in this browser.',
   participantBackgroundSize:'Size of sample points, or background points in Participant mode. Each setting is remembered separately for this dataset.',
