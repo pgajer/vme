@@ -30,7 +30,7 @@ function graphNodeDegrees(g){
 }
 function graphNodeSize(degree,dimension=3){return (dimension===2?5:4)*Math.sqrt(degree>0?degree:.25)}
 function graphNodeHover(n,degree){return graphNodeLabel(n)+'\nDegree: '+degree+' (displayed top-2 connections)'}
-function graphFadeStrengthValue(value,fallback=.5){
+function graphFadeStrengthValue(value,fallback=.25){
  const n=typeof value==='number'||typeof value==='string'&&value.trim()!==''?Number(value):NaN;
  return Number.isFinite(n)&&n>=0&&n<=1?n:fallback;
 }

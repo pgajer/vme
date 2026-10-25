@@ -159,7 +159,7 @@ async function restoreNamedView(view){
  await changeAnalysis(view.cohort,view.stateMode,view.coverage);
  if(view.participantSorting)setParticipantSortTarget(view.participantSorting.target);
  setGraphLayoutMode(view.graphLayout??'reference');setGraphProportionStrength(view.graphProportionStrength??4);setGraphEmbeddingMethod(view.graphEmbeddingMethod??'spring');el('dimension').value='3';restoreGraphEmbeddingFit(view);positions();
- el('dimension').value='3';el('vertexLabels').checked=view.vertexLabels;el('graphFadeBySize').checked=view.graphFadeBySize===true;setGraphFadeStrength(view.graphFadeStrength??(view.graphFadeBySize?1:.5));setGraphLabelSize(view.graphLabelSize??12);
+ el('dimension').value='3';el('vertexLabels').checked=view.vertexLabels;el('graphFadeBySize').checked=view.graphFadeBySize===true;setGraphFadeStrength(view.graphFadeStrength??(view.graphFadeBySize?1:.25));setGraphLabelSize(view.graphLabelSize??12);
  restoreTrajectoryView(view.trajectory);
  restoreAnnotationSettings(view.annotations);
  restoreSubjectEmbeddingFit(view);

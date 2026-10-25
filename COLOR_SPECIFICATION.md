@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 8 · reviewed 25 October 2026.
+Specification version 9 · reviewed 25 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -49,8 +49,8 @@ enabled. Edge opacity is `(state count / largest state count)^strength`, using
 the full current reference graph (chosen population, pure/merged mode and
 coverage target). Strength ranges from 0 (all opaque) to 1 (original linear
 fading); lower values make smaller states more visible without changing their
-ordering. New settings start at 0.5 (square root): a state at 1% of the largest
-count has 10% opacity. Previously saved settings with fading on and no strength
+ordering. New settings start at 0.25 (fourth root): a state at 1% of the largest
+count has approximately 31.6% opacity. Previously saved settings with fading on and no strength
 restore 1, preserving their appearance. Strength persists per dataset and in
 named views, including an explicit zero. Selecting
 a subgraph does not renormalize this denominator. Counts use that graph's
