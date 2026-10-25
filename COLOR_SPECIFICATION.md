@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 6 · reviewed 24 October 2026.
+Specification version 7 · reviewed 25 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -41,6 +41,23 @@ pickers for these pairs. Its colors share the existing pair palette and override
 the graph retains merged-group colors. Hiding a component does not delete its
 row or change assignments. Explicit VALENCIA2 and rank-3 color modes retain
 precedence over these defaults.
+
+## Optional graph fading by state size
+
+**Fade small 2-CSTs** starts off. When enabled, graph edge opacity is its
+state count divided by the largest state count in the full current reference
+graph (the chosen population, pure/merged mode and coverage target). Selecting
+a subgraph does not renormalize this denominator. Counts use that graph's
+existing observation unit, including distinct profiles where applicable.
+
+The lower-degree endpoint of each displayed edge is faded; both endpoints
+qualify on degree ties. Each qualifying vertex and its label use the largest
+opacity among all its displayed incident edges. Other vertices, including
+isolated vertices, remain opaque. Degrees count displayed top-2 connections.
+Colors retain their existing meanings, including the participant density scale;
+the selected visit marker and top-3 faces retain their own appearance. Hover
+and selection remain available even for faint edges. Fading persists per dataset
+and in named views, applies in 2D/3D and exports, and changes no counts or geometry.
 
 ## Pure core/non-core comparison
 

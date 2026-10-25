@@ -30,6 +30,37 @@ function graphNodeDegrees(g){
 }
 function graphNodeSize(degree,dimension=3){return (dimension===2?5:4)*Math.sqrt(degree>0?degree:.25)}
 function graphNodeHover(n,degree){return graphNodeLabel(n)+'\nDegree: '+degree+' (displayed top-2 connections)'}
+// Normalize against the full current reference, so selecting a subgraph does
+// not turn a rare state opaque. Degree and incident support use displayed edges.
+function graphFadeStyle(g,reference=current(),enabled=el('graphFadeBySize')?.checked===true){
+ const maximum=Math.max(0,...reference.edges.map(e=>e.frequency));
+ const edge=e=>enabled&&maximum>0?Math.max(0,Math.min(1,e.frequency/maximum)):1;
+ const degrees=graphNodeDegrees(g),support=new Map(g.nodes.map(n=>[n.id,0])),lower=new Set();
+ for(const e of g.edges){
+  support.set(e.from,Math.max(support.get(e.from)||0,edge(e)));support.set(e.to,Math.max(support.get(e.to)||0,edge(e)));
+  if(degrees.get(e.from)<=degrees.get(e.to))lower.add(e.from);
+  if(degrees.get(e.to)<=degrees.get(e.from))lower.add(e.to);
+ }
+ return {edge,node:id=>enabled&&lower.has(id)?support.get(id):1};
+}
+function graphColorOpacity(color,opacity){
+ if(opacity===1)return color;
+ const rgb=color.startsWith('#')?color.slice(1).match(/../g).map(x=>parseInt(x,16)):color.match(/[\d.]+/g).slice(0,3);
+ return `rgba(${rgb.join(',')},${opacity})`;
+}
+function graphEdgeTraces(g,lookup,project=null){
+ const degrees=graphNodeDegrees(g),fade=graphFadeStyle(g);
+ return [false,true].map(active=>{
+  const pts=[],ids=[],text=[],colors=[],base=active?'#cf6b21':'#82a9b9';
+  for(const e of g.edges.filter(e=>activeEdge(e)===active)){
+   const a=lookup.get(e.from),b=lookup.get(e.to),ends=project?clippedSegment(a,b,project,graphNodeSize(degrees.get(e.from))+5,graphNodeSize(degrees.get(e.to))+5):[a,b];if(!ends)continue;
+   const steps=g.edges.length>100?2:9,color=graphColorOpacity(base,fade.edge(e));
+   for(let i=0;i<steps;i++){pts.push(ends[0].map((v,j)=>v+(ends[1][j]-v)*i/(steps-1)));ids.push(e.id);colors.push(color);text.push(`${esc(e.key)}: ${esc(e.label)}<br>n=${e.frequency}; Endpoint distance=${fmt(e.length)} pp${graphLayoutHover(e)}`)}
+   pts.push([null,null,null]);ids.push(null);text.push('');colors.push(color);
+  }
+  return {type:'scatter3d',mode:'lines+markers',x:pts.map(p=>p[0]),y:pts.map(p=>p[1]),z:pts.map(p=>p[2]),customdata:ids,connectgaps:false,line:{color:el('graphFadeBySize')?.checked?colors:base,width:active?7:3},marker:{size:3,color:'rgba(0,0,0,0)'},text,hovertemplate:'%{text}<extra></extra>'};
+ });
+}
 function graphVertexAtPointer(x,y){
  const {g,lookup}=graphGeometry(),degrees=graphNodeDegrees(g);
  return g.nodes.map(n=>({id:n.id,size:graphNodeSize(degrees.get(n.id)),p:graphScreenPoint(lookup.get(n.id))})).filter(n=>n.p&&n.p.z>=-1&&n.p.z<=1&&Math.hypot(n.p.x-x,n.p.y-y)<=Math.max(11,n.size+4)).sort((a,b)=>a.p.z-b.p.z)[0]?.id;
@@ -58,13 +89,10 @@ async function trimGraphEdges(){
   }finally{graphTrimming=false}
   return;
  }
- for(const active of [false,true]){const pts=[],ids=[],text=[];for(const e of g.edges.filter(e=>activeEdge(e)===active)){
-  const ends=clippedSegment(lookup.get(e.from),lookup.get(e.to),graphScreenPoint,graphNodeSize(degrees.get(e.from))+5,graphNodeSize(degrees.get(e.to))+5);if(!ends)continue;const [a,b]=ends,steps=g.edges.length>100?2:9;
-  for(let i=0;i<steps;i++){pts.push(a.map((v,j)=>v+(b[j]-v)*i/(steps-1)));ids.push(e.id);text.push(`${esc(e.key)}: ${esc(e.label)}<br>n=${e.frequency}; Endpoint distance=${fmt(e.length)} pp${graphLayoutHover(e)}`)}pts.push([null,null,null]);ids.push(null);text.push('');
- }updates.push({x:pts.map(p=>p[0]),y:pts.map(p=>p[1]),z:pts.map(p=>p[2]),customdata:ids,text})}
+ updates.push(...graphEdgeTraces(g,lookup,graphScreenPoint));
  graphTrimming=true;try{
   await Plotly.relayout(el('graph3d'),{'scene.camera':camera});
-  await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text'].map(k=>[k,updates.map(u=>u[k])])),[0,1]);
+  await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text','line'].map(k=>[k,updates.map(u=>u[k])])),[0,1]);
  }finally{graphTrimming=false}
 }
 (function installViewExport(){
