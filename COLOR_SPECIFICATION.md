@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 9 · reviewed 25 October 2026.
+Specification version 10 · reviewed 25 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -44,15 +44,17 @@ precedence over these defaults.
 
 ## Optional graph fading by state size
 
-**Fade small 2-CSTs** starts off and reveals a **Fading strength** slider when
-enabled. Edge opacity is `(state count / largest state count)^strength`, using
-the full current reference graph (chosen population, pure/merged mode and
-coverage target). Strength ranges from 0 (all opaque) to 1 (original linear
-fading); lower values make smaller states more visible without changing their
-ordering. New settings start at 0.25 (fourth root): a state at 1% of the largest
-count has approximately 31.6% opacity. Previously saved settings with fading on and no strength
-restore 1, preserving their appearance. Strength persists per dataset and in
-named views, including an explicit zero. Selecting
+**Fade small 2-CSTs** starts enabled, with **Fading strength** set to 0.10.
+Edge opacity is `(state count / largest state count)^strength`, using the full
+current reference graph (chosen population, pure/merged mode and coverage target).
+The slider ranges from 0.05 to 0.25 in steps of 0.01. Lower values make smaller
+states more visible without changing their ordering; uncheck fading for full
+opacity. At the default 0.10, a state at 1% of the largest count has approximately
+63.1% opacity. Saved on/off choices persist. Saved strengths from the former
+0–1 range are clamped to 0.05–0.25 and rounded to the nearest step when loaded.
+Previously enabled views without a strength use 0.25 (their former strength 1
+clamped to the new range); otherwise missing/invalid strengths use 0.10.
+Preferences and named views retain the resulting strength. Selecting
 a subgraph does not renormalize this denominator. Counts use that graph's
 existing observation unit, including distinct profiles where applicable.
 

@@ -62,8 +62,8 @@ function restoreDatasetPanelSettings(){
    if(node.type==='checkbox'){if(typeof v==='boolean')node.checked=v}
    else if(typeof v==='string'&&(node.tagName!=='SELECT'||[...node.options].some(o=>o.value===v)))node.value=v;
   }
-  // Preserve linear fading in preferences saved before the strength control.
-  setGraphFadeStrength(valid&&saved.controls?.graphFadeStrength!==undefined?saved.controls.graphFadeStrength:valid&&saved.controls?.graphFadeBySize===true?1:.25);
+  // Clamp legacy strengths to the current slider range; preserve saved on/off choices.
+  setGraphFadeStrength(valid&&saved.controls?.graphFadeStrength!==undefined?saved.controls.graphFadeStrength:valid&&saved.controls?.graphFadeBySize===true ? .25 : .1);
   participant.axis=valid&&saved.composition?.axis==='elapsed'?'elapsed':'visit';
   for(const k of ['allTaxa','catalogue','stateBackground'])participant[k]=valid&&typeof saved.composition?.[k]==='boolean'?saved.composition[k]:k==='stateBackground';
   if(valid&&['id','key','label','frequency','length'].includes(saved.catalogueSort?.key)&&typeof saved.catalogueSort?.descending==='boolean')catalogueSort={...saved.catalogueSort};else catalogueSort={key:'id',descending:false};
