@@ -27,7 +27,7 @@ function createDatasetPanelStorage(storage,identity){
 const datasetPanelNativeStorage=(()=>{try{return typeof window==='undefined'?localStorage:window.localStorage}catch{return null}})();
 const datasetPanelStorage=createDatasetPanelStorage(datasetPanelNativeStorage,()=>{try{return activeEmbeddingFamily?.id||META.id}catch{return META.id}});
 let datasetPanelReady=false,datasetPanelRestoring=false,datasetPanelLayout=null,datasetPanelControlDefaults=null,datasetPanelDetailDefaults=null;
-const datasetPanelControlIds=['dimension','vertexLabels','graphFadeBySize','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
+const datasetPanelControlIds=['dimension','vertexLabels','graphFadeBySize','graphFadeStrength','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
 function panelReadJson(key,fallback){try{return JSON.parse(datasetPanelStorage.getItem(key))??fallback}catch{return fallback}}
 function panelControlSnapshot(){return Object.fromEntries(datasetPanelControlIds.map(id=>[id,el(id).type==='checkbox'?el(id).checked:el(id).value]))}
 function saveDatasetPanelSettings(){
@@ -62,6 +62,8 @@ function restoreDatasetPanelSettings(){
    if(node.type==='checkbox'){if(typeof v==='boolean')node.checked=v}
    else if(typeof v==='string'&&(node.tagName!=='SELECT'||[...node.options].some(o=>o.value===v)))node.value=v;
   }
+  // Preserve linear fading in preferences saved before the strength control.
+  setGraphFadeStrength(valid&&saved.controls?.graphFadeStrength!==undefined?saved.controls.graphFadeStrength:valid&&saved.controls?.graphFadeBySize===true?1:.5);
   participant.axis=valid&&saved.composition?.axis==='elapsed'?'elapsed':'visit';
   for(const k of ['allTaxa','catalogue','stateBackground'])participant[k]=valid&&typeof saved.composition?.[k]==='boolean'?saved.composition[k]:k==='stateBackground';
   if(valid&&['id','key','label','frequency','length'].includes(saved.catalogueSort?.key)&&typeof saved.catalogueSort?.descending==='boolean')catalogueSort={...saved.catalogueSort};else catalogueSort={key:'id',descending:false};

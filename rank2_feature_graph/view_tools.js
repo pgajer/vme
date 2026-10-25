@@ -30,11 +30,25 @@ function graphNodeDegrees(g){
 }
 function graphNodeSize(degree,dimension=3){return (dimension===2?5:4)*Math.sqrt(degree>0?degree:.25)}
 function graphNodeHover(n,degree){return graphNodeLabel(n)+'\nDegree: '+degree+' (displayed top-2 connections)'}
+function graphFadeStrengthValue(value,fallback=.5){
+ const n=typeof value==='number'||typeof value==='string'&&value.trim()!==''?Number(value):NaN;
+ return Number.isFinite(n)&&n>=0&&n<=1?n:fallback;
+}
+function graphFadeStrength(){return graphFadeStrengthValue(el('graphFadeStrength')?.value)}
+function setGraphFadeStrength(value){
+ const control=el('graphFadeStrength');if(control)control.value=String(graphFadeStrengthValue(value));
+ syncGraphFadeControls();
+}
+function syncGraphFadeControls(){
+ const control=el('graphFadeStrengthControl'),output=el('graphFadeStrengthValue');
+ if(control)control.hidden=el('graphFadeBySize')?.checked!==true;
+ if(output)output.textContent=graphFadeStrength().toFixed(2);
+}
 // Normalize against the full current reference, so selecting a subgraph does
 // not turn a rare state opaque. Degree and incident support use displayed edges.
-function graphFadeStyle(g,reference=current(),enabled=el('graphFadeBySize')?.checked===true){
- const maximum=Math.max(0,...reference.edges.map(e=>e.frequency));
- const edge=e=>enabled&&maximum>0?Math.max(0,Math.min(1,e.frequency/maximum)):1;
+function graphFadeStyle(g,reference=current(),enabled=el('graphFadeBySize')?.checked===true,strength=graphFadeStrength()){
+ const maximum=Math.max(0,...reference.edges.map(e=>e.frequency)),exponent=graphFadeStrengthValue(strength);
+ const edge=e=>enabled&&maximum>0?Math.pow(Math.max(0,Math.min(1,e.frequency/maximum)),exponent):1;
  const degrees=graphNodeDegrees(g),support=new Map(g.nodes.map(n=>[n.id,0])),lower=new Set();
  for(const e of g.edges){
   support.set(e.from,Math.max(support.get(e.from)||0,edge(e)));support.set(e.to,Math.max(support.get(e.to)||0,edge(e)));
