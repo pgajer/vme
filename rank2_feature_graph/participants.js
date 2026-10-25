@@ -1,13 +1,13 @@
 // Participant display uses audited metadata and explicitly selected saved/joint coordinates.
 const participantAppearanceKey='vme-participant-appearance-v1';
 function loadParticipantAppearance(){
- const defaults={embeddingMode:'union',graphSmoothing:10,graphBackground:false,matchBackground:false,colorBy:'visit',sphereSize:14,labelSize:12,vertexLabelSize:12,visitBoxSize:12,tableSize:13,backgroundSize:2,lineWidth:4,arrowScale:1,selectedLabelOnly:false,showLabels:true,showLines:true,showArrows:true,showVertices:true,backgroundOpacity:.25};
+ const defaults={sampleSize:2,sampleOpacity:.7,sampleColors:true,stateBackground:true,embeddingMode:'union',graphSmoothing:10,graphBackground:false,matchBackground:false,colorBy:'visit',sphereSize:14,labelSize:12,vertexLabelSize:12,visitBoxSize:12,tableSize:13,backgroundSize:2,lineWidth:4,arrowScale:1,selectedLabelOnly:false,showLabels:true,showLines:true,showArrows:true,showVertices:true,backgroundOpacity:.25};
  try{
   const saved=JSON.parse((typeof datasetPanelStorage==='undefined'?localStorage:datasetPanelStorage).getItem(participantAppearanceKey)||'null');
   if(['union','reference'].includes(saved?.embeddingMode))defaults.embeddingMode=saved.embeddingMode;
   if(['visit','original','merged'].includes(saved?.colorBy))defaults.colorBy=saved.colorBy;
-  for(const key of ['graphBackground','selectedLabelOnly','showLabels','showLines','showArrows','showVertices','matchBackground'])if(typeof saved?.[key]==='boolean')defaults[key]=saved[key];
-  for(const [key,min,max,integer] of [['graphSmoothing',2,30,true],['sphereSize',4,40,true],['labelSize',8,32,true],['vertexLabelSize',8,32,true],['visitBoxSize',10,24,true],['tableSize',10,24,true],['backgroundSize',1,12,true],['lineWidth',1,16,true],['arrowScale',.25,3,false],['backgroundOpacity',0,1,false]]){
+  for(const key of ['sampleColors','stateBackground','graphBackground','selectedLabelOnly','showLabels','showLines','showArrows','showVertices','matchBackground'])if(typeof saved?.[key]==='boolean')defaults[key]=saved[key];
+  for(const [key,min,max,integer] of [['sampleSize',1,12,true],['sampleOpacity',0,1,false],['graphSmoothing',2,30,true],['sphereSize',4,40,true],['labelSize',8,32,true],['vertexLabelSize',8,32,true],['visitBoxSize',10,24,true],['tableSize',10,24,true],['backgroundSize',1,12,true],['lineWidth',1,16,true],['arrowScale',.25,3,false],['backgroundOpacity',0,1,false]]){
    const value=saved?.[key];
    if(Number.isFinite(value)&&value>=min&&value<=max&&(!integer||Number.isInteger(value)))defaults[key]=value;
   }
@@ -79,10 +79,12 @@ function validateParticipantView(s,bundle){
  if(s.vertexLabelSize!==undefined&&(!Number.isInteger(s.vertexLabelSize)||s.vertexLabelSize<8||s.vertexLabelSize>32))throw Error('Invalid saved reference vertex label size.');
  if(s.visitBoxSize!==undefined&&(!Number.isInteger(s.visitBoxSize)||s.visitBoxSize<10||s.visitBoxSize>24))throw Error('Invalid saved visit box font size.');
  if(s.tableSize!==undefined&&(!Number.isInteger(s.tableSize)||s.tableSize<10||s.tableSize>24))throw Error('Invalid saved composition table font size.');
+ if(s.sampleSize!==undefined&&(!Number.isInteger(s.sampleSize)||s.sampleSize<1||s.sampleSize>12))throw Error('Invalid saved sample point size.');
+ if(s.sampleOpacity!==undefined&&(!Number.isFinite(s.sampleOpacity)||s.sampleOpacity<0||s.sampleOpacity>1))throw Error('Invalid saved sample opacity.');
  if(s.backgroundSize!==undefined&&(!Number.isInteger(s.backgroundSize)||s.backgroundSize<1||s.backgroundSize>12))throw Error('Invalid saved background point size.');
  if(s.lineWidth!==undefined&&(!Number.isInteger(s.lineWidth)||s.lineWidth<1||s.lineWidth>16))throw Error('Invalid saved participant line thickness.');
  if(s.arrowScale!==undefined&&(!Number.isFinite(s.arrowScale)||s.arrowScale<.25||s.arrowScale>3))throw Error('Invalid saved participant arrowhead size.');
- for(const key of ['graphBackground','selectedLabelOnly','showLabels','showLines','showArrows','showVertices','matchBackground'])if(s[key]!==undefined&&typeof s[key]!=='boolean')throw Error('Invalid saved participant visibility setting.');
+ for(const key of ['sampleColors','stateBackground','graphBackground','selectedLabelOnly','showLabels','showLines','showArrows','showVertices','matchBackground'])if(s[key]!==undefined&&typeof s[key]!=='boolean')throw Error('Invalid saved participant visibility setting.');
  if(s.backgroundOpacity!==undefined&&(!Number.isFinite(s.backgroundOpacity)||s.backgroundOpacity<0||s.backgroundOpacity>1))throw Error('Invalid saved background opacity.');
  if(s.active&&s.embeddingMode==='union'&&d?.capabilities?.jointEmbedding===false)throw Error('This dataset uses saved reference coordinates only; joint embeddings are not prepared.');
  if(s.active&&s.auditRevision!==d?.provenance.auditSha256)throw Error('The participant metadata revision differs from this saved view.');
@@ -95,7 +97,7 @@ function validateParticipantBackgroundView(s,bundle,data,stateMode){
  const available=new Set(records.filter(r=>r.cohort===cohort).map(r=>original?bundle.data.samples.pair[r.profile]:data.samples.pair[r.index]));
  if(s.backgroundStates.some(id=>!available.has(id)))throw Error('Invalid saved background highlight states for this cohort and color scheme.');
 }
-function participantRestore(s){participantBackgroundHighlight=null;participant=s?{embeddingMode:'reference',graphSmoothing:10,graphBackground:false,tableSort:null,matchBackground:false,colorBy:'visit',stateBackground:false,sphereSize:14,labelSize:12,vertexLabelSize:12,visitBoxSize:12,tableSize:13,backgroundSize:2,lineWidth:4,arrowScale:1,selectedLabelOnly:false,showLabels:true,showLines:true,showArrows:true,showVertices:false,backgroundOpacity:s.stateBackground?.55:.25,...s}:{active:false,key:'',record:null,axis:'visit',allTaxa:false,taxon:null,tableSort:null,catalogue:false,colorBy:'visit',stateBackground:true,...participantAppearance};
+function participantRestore(s){participantBackgroundHighlight=null;participant=s?{sampleSize:2,sampleOpacity:.7,sampleColors:true,embeddingMode:'reference',graphSmoothing:10,graphBackground:false,tableSort:null,matchBackground:false,colorBy:'visit',stateBackground:false,sphereSize:14,labelSize:12,vertexLabelSize:12,visitBoxSize:12,tableSize:13,backgroundSize:2,lineWidth:4,arrowScale:1,selectedLabelOnly:false,showLabels:true,showLines:true,showArrows:true,showVertices:!s.active,backgroundOpacity:s.stateBackground?.55:.25,...s}:{active:false,key:'',record:null,axis:'visit',allTaxa:false,taxon:null,tableSort:null,catalogue:false,colorBy:'visit',stateBackground:true,...participantAppearance};
  if(participant.active&&participant.stateBackground&&s?.backgroundStates?.length)participantBackgroundHighlight={context:participantBackgroundContext(),pairs:[...s.backgroundStates]};
  delete participant.backgroundStates;
  syncParticipantControls()}
@@ -115,7 +117,7 @@ function participantReset(){
 function syncParticipantControls(){
  refreshParticipantChoices();
  const available=!!participantData();el('participantMode').disabled=!available;el('participantMode').checked=participant.active;
- el('participantControls').hidden=!available;el('sampleAppearance').hidden=!available;
+ el('participantControls').hidden=!available;el('sampleAppearance').hidden=false;
  el('participantAvailability').hidden=available;
  el('participantAvailability').textContent=available?'':'Participant mode requires a verified dataset supplement.';
  const active=participant.active;
@@ -160,6 +162,7 @@ function syncParticipantControls(){
  if(active)for(const id of ['sampleEmbedding','panelSampleEmbedding','scope'])el(id).disabled=true;
  const timing=participantTiming(participantRows());if(!timing.available)participant.axis='visit';
  el('participantAxis').value=participant.axis;el('participantAxis').options[1].disabled=!timing.available;
+ syncSampleAppearanceControls();
  el('participantAxis').title=timing.available?'Elapsed days use verified dates or measured study days.':timing.reason;
  el('participantAllTaxa').checked=participant.allTaxa;
 }
@@ -346,7 +349,7 @@ async function openParticipant(key){
  const openedDataset=META.id,revision=++participantOpenRevision,camera=participant.active?readCamera('samples'):defaultCamera,graphCamera=readCamera('graph3d'),embeddingMode=!participantJointAvailable()?'reference':participant.embeddingMode,graphSmoothing=participant.graphSmoothing,graphBackground=participant.graphBackground,matchBackground=participant.matchBackground,colorBy=participant.colorBy,stateBackground=participant.stateBackground,sphereSize=participant.sphereSize,labelSize=participant.labelSize,vertexLabelSize=participant.vertexLabelSize,visitBoxSize=participant.visitBoxSize,tableSize=participant.tableSize,backgroundSize=participant.backgroundSize,lineWidth=participant.lineWidth,arrowScale=participant.arrowScale,selectedLabelOnly=participant.selectedLabelOnly,showLabels=participant.showLabels,showLines=participant.showLines,showArrows=participant.showArrows,showVertices=participant.showVertices,backgroundOpacity=participant.backgroundOpacity;
  if(!DATA.records||activeCohort!==rows[0].cohort)await changeAnalysis(rows[0].cohort,activeStateMode,el('coverage').value);
  if(revision!==participantOpenRevision||META.id!==openedDataset||!participantData()||activeCohort!==rows[0].cohort)return;
- participant={active:true,key,record:rows[0].index,axis,allTaxa,taxon:null,tableSort:null,catalogue,embeddingMode,graphSmoothing,graphBackground,matchBackground,colorBy,stateBackground,sphereSize,labelSize,vertexLabelSize,visitBoxSize,tableSize,backgroundSize,lineWidth,arrowScale,selectedLabelOnly,showLabels,showLines,showArrows,showVertices,backgroundOpacity};
+ participant={sampleSize:participant.sampleSize,sampleOpacity:participant.sampleOpacity,sampleColors:participant.sampleColors,active:true,key,record:rows[0].index,axis,allTaxa,taxon:null,tableSort:null,catalogue,embeddingMode,graphSmoothing,graphBackground,matchBackground,colorBy,stateBackground,sphereSize,labelSize,vertexLabelSize,visitBoxSize,tableSize,backgroundSize,lineWidth,arrowScale,selectedLabelOnly,showLabels,showLines,showArrows,showVertices,backgroundOpacity};
  rank3Clear();rank3.enabled=false;syncRank3Controls();el('participantMode').checked=true;
  if(typeof saveDatasetNavigation==='function')saveDatasetNavigation();
  return chooseParticipantRecord(rows[0].index,camera,graphCamera);
@@ -516,6 +519,46 @@ function renderParticipantComposition(rows){
  el('participantComposition').innerHTML=`<div class="compositionScroll" tabindex="0" role="region" aria-label="Taxon relative abundances by visit"><table class="participantCompositionTable"><thead><tr><th scope="col">Taxon</th>${header}</tr></thead><tbody>${body}</tbody><tfoot><tr><th scope="row">Total</th>${totals}</tr></tfoot></table></div><small>Columns follow visit order; column widths do not represent elapsed time. All ${d.features.length} features are accounted for. Values are rounded to two decimals; positive values below 0.01% are shown as &lt;0.01%. Displayed values may not sum to exactly 100% after rounding. Hover for unrounded percentages.</small>`;
  if(typeof requestAnimationFrame==='function')requestAnimationFrame(centerParticipantComposition);
 }
+// Shared sample controls also apply outside Participant mode. Keep ordinary
+// sample settings separate from the dimmer background behind participant visits.
+function syncSampleAppearanceControls(referenceAvailable=true){
+ const active=participant.active;
+ el('samplePointGroupTitle').textContent=active?'Background samples':'Samples';
+ el('samplePointColorLabel').textContent=active?'Color background by top-2 CST':'Use sample colors';
+ el('samplePointSizeLabel').textContent=active?'Background point size':'Sample point size';
+ el('samplePointOpacityLabel').textContent=active?'Background opacity':'Sample opacity';
+ el('participantVisitAppearanceNote').hidden=active;
+ el('participantStateBackground').disabled=false;
+ el('participantStateBackground').checked=active?participant.stateBackground:participant.sampleColors;
+ el('participantStateBackground').parentElement?.setAttribute('title',active?'Color background by community state. Uncheck for gray samples.':'Use the current sample color scheme. Uncheck for gray samples.');
+ el('participantMatchBackground').parentElement?.setAttribute('title','Available when a participant is selected and background state colors are enabled.');
+ el('participantMatchBackground').disabled=!active||!participant.stateBackground;
+ for(const [id,key,scale] of [['participantBackgroundSize',active?'backgroundSize':'sampleSize',1],['participantBackgroundOpacity',active?'backgroundOpacity':'sampleOpacity',100]]){
+  el(id).disabled=false;el(id).value=participant[key]*scale;
+  el(id+'Value').textContent=Math.round(participant[key]*scale)+(scale===100?'%':' px');
+ }
+ el('participantShowVertices').disabled=!referenceAvailable;
+ el('participantVertexLabelSize').disabled=!referenceAvailable||!participant.showVertices;
+ el('sampleReferenceNote').hidden=referenceAvailable;
+ el('participantLabelSize').disabled=!active||!participant.showLabels;
+ el('participantArrowScale').disabled=!active||!participant.showLines||!participant.showArrows;
+}
+function renderSamplePlot(traces,layout,config){
+ if(!participant.active){
+  const referenceLabel=a=>String(a.name||'').startsWith('endpoint-vertex:');
+  const annotations=layout.scene?.annotations||[];
+  const references=annotations.some(referenceLabel)||traces.some(t=>t.meta?.referenceVertices);
+  syncSampleAppearanceControls(references);
+  traces=traces.map(t=>{
+   if(t.meta?.referenceVertices)return {...t,mode:participant.showVertices?'markers+text':'markers',textfont:{...t.textfont,size:participant.vertexLabelSize}};
+   if(!t.meta?.sampleView||!t.marker||t.meta.edgeFaceRings)return t;
+   const size=Array.isArray(t.marker.size)?t.marker.size.map(n=>n*participant.sampleSize/2):participant.sampleSize;
+   return {...t,marker:{...t.marker,size,opacity:participant.sampleOpacity,...(!participant.sampleColors?{color:'#a8adb2'}:{})}};
+  });
+  if(layout.scene)layout={...layout,scene:{...layout.scene,annotations:annotations.filter(a=>!referenceLabel(a)||participant.showVertices).map(a=>referenceLabel(a)?{...a,font:{...a.font,size:participant.vertexLabelSize}}:a)}};
+ }
+ return Plotly.react('samples',traces,layout,config);
+}
 function participantVertexAnnotations(){
  if(!participant.showVertices)return [];
  const groups=new Map();
@@ -642,11 +685,11 @@ function installControlHelp(){
   participantSelectedLabelOnly:'Label only the observation selected in the trajectory, visit selector or sample plot.',
   participantShowArrows:'Show arrowheads indicating observation order along visible visit lines.',
   participantEmbeddingMode:'Joint 3D fits all cohort samples assigned to any state occupied by this subject, using full compositions and the main Pure/Merged selection. Full reference retains the earlier embedding. Fits stay fixed across visits and are saved separately.',
-  participantShowVertices:'Show taxon names at their observed maximum-abundance compositions. Joint mode uses maxima within the subject’s occupied states; Full reference uses the full-reference maxima.',
+  participantShowVertices:'Show or hide names at the reference compositions supplied for the current sample view. Reference markers and hover information remain available.',
   participantVertexLabelSize:'Size of reference taxon labels in the sample plot. Remembered in this browser.',
   participantArrowScale:'100% uses the original arrowhead size, scaled to each visit segment. Remembered in this browser.',
-  participantBackgroundSize:'Size of background sample points. Remembered in this browser.',
-  participantBackgroundOpacity:'Applies to both gray and state colors; 0% hides the background. Remembered in this browser.'
+  participantBackgroundSize:'Size of sample points, or background points in Participant mode. Each setting is remembered separately for this dataset.',
+  participantBackgroundOpacity:'Opacity of sample points, or background points in Participant mode. 0% hides those points. Reference markers and selected visits are unchanged.'
  };
  for(const [copy,source] of [['panelDatasetSelect','datasetSelect'],['panelCohortSelect','cohortSelect'],['panelStateMode','stateMode'],['panelCoverage','coverage'],['panelSampleEmbedding','sampleEmbedding'],['panelLoadDataset','loadDataset'],['sampleBackSelection','backSelection'],['sampleForwardSelection','forwardSelection'],['sampleClearSelection','clearSelection']])explanations[copy]=explanations[source];
  const popup=el('participantHelpPopover');document.body?.appendChild(popup);let active=null,pinned=false;
@@ -753,7 +796,7 @@ function installParticipants(){
  };
  el('participantMode').onchange=()=>{if(!el('participantMode').checked){leaveParticipant();return}el('participantSelect').focus();refreshParticipantChoices();el('participantMode').checked=participant.active;el('participantMessage').textContent='Choose a participant from the dropdown to open Participant mode.'};
  for(const [id,key] of [['participantSelectedLabelOnly','selectedLabelOnly'],['participantShowLabels','showLabels'],['participantShowLines','showLines'],['participantShowArrows','showArrows'],['participantShowVertices','showVertices']])el(id).onchange=()=>{
-  if(!participant.active)return;
+  if(!participant.active&&key!=='showVertices')return;
   const camera=pendingSampleCamera||readCamera('samples');participant[key]=el(id).checked;
   saveParticipantAppearance(key);syncParticipantControls();return refreshSamples(camera);
  };
@@ -765,14 +808,14 @@ function installParticipants(){
   if(!participant.active)return;const camera=pendingSampleCamera||readCamera('samples');
   participant.matchBackground=el('participantMatchBackground').checked;saveParticipantAppearance('matchBackground');return refreshSamples(camera);
  };
- el('participantStateBackground').onchange=()=>{const camera=readCamera('samples');participant.stateBackground=el('participantStateBackground').checked;return refreshSamples(camera)};
+ el('participantStateBackground').onchange=()=>{const camera=readCamera('samples'),key=participant.active?'stateBackground':'sampleColors';participant[key]=el('participantStateBackground').checked;saveParticipantAppearance(key);return refreshSamples(camera)};
  for(const [id,key,min,max,scale] of [['participantSphereSize','sphereSize',4,40,1],['participantLabelSize','labelSize',8,32,1],['participantVertexLabelSize','vertexLabelSize',8,32,1],['participantBackgroundSize','backgroundSize',1,12,1],['participantLineWidth','lineWidth',1,16,1],['participantArrowScale','arrowScale',25,300,100],['participantBackgroundOpacity','backgroundOpacity',0,100,100]]){
   el(id).oninput=()=>{
-   if(!participant.active)return;
+   if(!participant.active&&!['vertexLabelSize','backgroundSize','backgroundOpacity'].includes(key))return;
    const value=Number(el(id).value);if(!Number.isFinite(value))return;
-   const camera=pendingSampleCamera||readCamera('samples');
-   participant[key]=Math.min(max,Math.max(min,Math.round(value)))/scale;
-   saveParticipantAppearance(key);syncParticipantControls();return key==='backgroundOpacity'?updateParticipantBackgroundOpacity():refreshSamples(camera);
+   const camera=pendingSampleCamera||readCamera('samples'),setting=!participant.active&&key==='backgroundSize'?'sampleSize':!participant.active&&key==='backgroundOpacity'?'sampleOpacity':key;
+   participant[setting]=Math.min(max,Math.max(min,Math.round(value)))/scale;
+   saveParticipantAppearance(setting);syncParticipantControls();return participant.active&&key==='backgroundOpacity'?updateParticipantBackgroundOpacity():refreshSamples(camera);
   };
  }
  el('participantCohort').onchange=()=>{el('participantMessage').textContent='';refreshParticipantChoices();if(typeof saveDatasetNavigation==='function')saveDatasetNavigation()};

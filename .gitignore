@@ -50,3 +50,5 @@
 !/rank2_feature_graph/viewer_source.py
 !/scripts/portable.py
 !/scripts/test_portable.py
+
+!/rank2_feature_graph/test_sample_appearance.mjs
