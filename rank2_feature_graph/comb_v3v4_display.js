@@ -59,7 +59,7 @@ function materializeCombDisplay(bundle,cohort,mode,q){
  const compositions=BUNDLE_PACK.participants[bundle.dataset.id].compositions;
  function fitted(kind,selection,indices){
   const key=combDisplayKey(kind,pop,kind==='overview'?null:Number(q),selection),f=combDisplayFit(key),positions=new Map(f.profiles.map((p,i)=>[p,f.coords[i]]));
-  return {...f,key,indices,n:indices.length,coords:indices.map(i=>positions.get(records[i].profile)),source:f.historical?'Reused frozen coordinates; original fit provenance retained':'Independent full-composition Euclidean fit; 200 SGD epochs (analytic for ≤4 profiles)', 'relative.error':f.evaluation?.relativeRms??null,pca:{'90':null,'95':null,'99':null}};
+  return {...f,key,fittingScope:kind==='overview'?'population':'local',indices,n:indices.length,coords:indices.map(i=>positions.get(records[i].profile)),source:f.historical?'Reused frozen coordinates; original fit provenance retained':'Independent full-composition Euclidean fit; 200 SGD epochs (analytic for ≤4 profiles)', 'relative.error':f.evaluation?.relativeRms??null,pca:{'90':null,'95':null,'99':null}};
  }
  function anchors(f,ids){
   return ids.map(j=>{let best=0,maximum=-1;f.indices.forEach((i,k)=>{const v=compositions[records[i].profile].find(v=>v[0]===j-1)?.[1]??0;if(v>maximum){best=k;maximum=v}});const i=f.indices[best];return {feature:j,row:i,id:records[i].id,coords:f.coords[best],member:true,method:'Observed maximum within this fitted population',relative_error:0,maximum}});

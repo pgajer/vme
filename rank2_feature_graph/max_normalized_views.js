@@ -100,7 +100,20 @@ function maxNormalizedLocalReferences(features,fit){
  });
 }
 // Preserve historical route values for named views and dataset settings. The
-// visible controls separate distance geometry from the scope of the saved fit.
+// visible control chooses geometry; fitting follows the current selection.
+function applyAutomaticEmbedding(){
+ if(participant.active||rank3UsesSamples()||candidateActive()||pureCoverageActive())return;
+ const route=el('sampleEmbedding').value,selection=hasSelection();
+ if(maxNormalizedIds.includes(route)){
+  const method=maxNormalizedMethod(route);
+  el('sampleEmbedding').value=method+(selection&&maxNormalizedLocalEntry(method)?'-local':'');
+ }else if(selection){
+  const fit=selectedVertex!==null?DATA.vertexEmbeddings?.fits[DATA.vertexEmbeddings.mapping[el('coverage').value+'_'+selectedVertex]]:DATA.localEmbeddings?.[selected];
+  el('sampleEmbedding').value=fit?'local':DATA.referenceCoords?'reference':'global';
+ }else el('sampleEmbedding').value='overview';
+ preferredSampleEmbedding=el('sampleEmbedding').value==='overview'?'local':el('sampleEmbedding').value;
+ if(selection)el('scope').value='selected';
+}
 function embeddingChoiceState(){
  const route=el('sampleEmbedding').value,method=maxNormalizedIds.includes(route)?maxNormalizedMethod(route):'l1-euclidean';
  const cohort=!!DATA.referenceCoords&&activeCohort!=='all';
@@ -117,7 +130,7 @@ function syncEmbeddingChoices(){
   const method=el(methodId),scope=el(scopeId);if(!method||!scope)return;
   for(const option of method.options){option.disabled=option.value!=='l1-euclidean'&&!maxAvailable;if(option.value==='l1-euclidean')option.textContent=typeof standardSampleEmbeddingTitle==='function'&&standardSampleEmbeddingTitle('').startsWith('Normalization/metric unspecified')?'Normalization/metric unspecified':'L1-normalized · Euclidean'}
   method.value=state.method;method.disabled=state.locked;
-  method.title=state.locked?'This view uses its supported saved embedding.':'Normalization and distance metric. Max-normalized methods require the rebuilt-reference supplement.';
+  method.title=state.locked?'This view uses its supported saved embedding.':'Normalization and distance metric. Uses a saved local fit when available; otherwise restricts the population embedding to the selection.';
   for(const option of scope.options){
    option.hidden=option.value==='cohort'&&!state.cohort||option.value==='subject'&&state.scope!=='subject';
    option.disabled=option.value==='local'?!localAvailable:option.value==='cohort'?(state.method!=='l1-euclidean'||!state.cohort):option.value==='subject';
@@ -129,16 +142,13 @@ function syncEmbeddingChoices(){
   if(scope.parentElement)scope.parentElement.title=scope.title;
  }
 }
-function changeEmbeddingChoice(method,scope){
+function changeEmbeddingChoice(method){
  const state=embeddingChoiceState();if(state.locked)return;
  if(maxNormalizedMethods.includes(method)){
   if(!maxNormalizedAsset())return;
-  el('sampleEmbedding').value=method+(scope==='local'&&maxNormalizedLocalEntry(method)?'-local':'');
- }else{
-  el('sampleEmbedding').value=scope==='local'?'local':scope==='cohort'?(hasSelection()?'global':'overview'):
-   DATA.referenceCoords?'reference':hasSelection()?'global':'overview';
- }
- preferredSampleEmbedding=el('sampleEmbedding').value==='overview'?'global':el('sampleEmbedding').value;
+  el('sampleEmbedding').value=method;
+ }else el('sampleEmbedding').value='overview';
+ applyAutomaticEmbedding();
  return el('sampleEmbedding').onchange();
 }
 function installEmbeddingChoices(){

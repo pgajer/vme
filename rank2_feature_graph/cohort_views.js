@@ -29,14 +29,19 @@ function samplePanelTitle(method,selection='',cohortOverride=null){
 }
 function sampleEmbeddingTitle(overview=false){
  const mode=el('sampleEmbedding').value;
- if(mode.startsWith('maxnorm-euclidean'))return 'Max-normalized Euclidean · '+(maxNormalizedIsLocal()?'Local':'Population')+' 3D MDS';
- if(mode.startsWith('maxnorm-linf'))return 'Max-normalized L∞ · '+(maxNormalizedIsLocal()?'Local':'Population')+' 3D MDS';
- if(mode==='reference')return standardSampleEmbeddingTitle('Reference 3D MDS');
- if(!overview)return standardSampleEmbeddingTitle(mode==='local'?'Local 3D MDS':'Global 3D MDS');
- if(META.id==='comb-V3V4-tx'&&DATA.records)return standardSampleEmbeddingTitle('Population 3D MDS');
- let method=META.overviewLabel||'Saved 3D embedding';
- for(const separator of [' · ',' — '])if(META.populationName&&method.startsWith(META.populationName+separator))method=method.slice(META.populationName.length+separator.length);
- return standardSampleEmbeddingTitle(method);
+ const isMax=maxNormalizedIds.includes(mode),local=mode==='local'||isMax&&maxNormalizedIsLocal();
+ let scope;
+ if(local&&!overview){
+  const fit=localSelectionFit();
+  scope=fit?.fittingScope==='population-restriction'?'Population 3D MDS (restricted)':
+   fit?.fittingScope==='local-restriction'?'Local 3D MDS (restricted)':'Local 3D MDS';
+ }else{
+  const fit=overview?DATA.overviewEmbeddings?.[el('coverage').value]:null;
+  const restricted=!overview||fit?.fittingScope==='population-restriction'||isMax&&(activeCohort!=='all'||activeStateMode==='pure');
+  scope=restricted?'Population 3D MDS (restricted)':'Population 3D MDS';
+ }
+ if(isMax)return (mode.startsWith('maxnorm-euclidean')?'Max-normalized Euclidean':'Max-normalized L∞')+' · '+scope;
+ return standardSampleEmbeddingTitle(scope);
 }
 function syncAnalysisControls(){
  const a=analysisExtension(),records=recordExtension();
@@ -74,10 +79,10 @@ function materializeAnalysis(bundle,cohort,mode,q){
  const globalCoords=records.map(r=>globalByProfile.get(r.profile)||b.samples.coords[r.profile]);
  for(const [j,ref] of Object.entries(fullFit.references)){const row=profileRecords.get(ref.profile);globalCoords[row]=ref.coords}
  const fitCache=new Map();
- function fit(key){if(fitCache.has(key))return fitCache.get(key);const f=a.fits[key],byProfile=new Map(f.profileIndices.map((p,i)=>[p,f.profileCoords[i]]));const result={...f,coords:f.indices.map(i=>byProfile.get(records[i].profile)),source:'Independent selected-population Euclidean fit (duplicate profiles share coordinates)'};fitCache.set(key,result);return result}
+ function fit(key){if(fitCache.has(key))return fitCache.get(key);const f=a.fits[key],byProfile=new Map(f.profileIndices.map((p,i)=>[p,f.profileCoords[i]]));const result={...f,fittingScope:'local',coords:f.indices.map(i=>byProfile.get(records[i].profile)),source:'Independent selected-population Euclidean fit (duplicate profiles share coordinates)'};fitCache.set(key,result);return result}
  function references(key,ids,indices){const f=a.fits[key],included=new Set(indices);return ids.map(j=>{const ref=f.references[j],n=nodesByID.get(j),row=profileRecords.get(n.anchor_row);return {...ref,feature:j,row,id:records[row].id,member:included.has(row)}})}
  const included=population.filter(i=>spec.states[labels[records[i].profile]]);
- const overview={indices:included,n:included.length,coords:included.map(i=>globalCoords[i]),source:'Independently fitted selected population, restricted to displayed states'};
+ const overview={fittingScope:included.length===population.length?'population':'population-restriction',indices:included,n:included.length,coords:included.map(i=>globalCoords[i]),source:'Independently fitted selected population, restricted to displayed states'};
  const localEmbeddings={},endpointProjections={},pcaDimensions={},vertexFits={},vertexMap={},vertexReferences={};
  for(const [s,key] of Object.entries(spec.states)){const f=fit(key);localEmbeddings[s]=f;endpointProjections[s]=references(key,s.split(',').map(Number),f.indices);pcaDimensions[s]={n:f.n,...f.pca}}
  for(const [j,key] of Object.entries(spec.vertices)){const f=fit(key);vertexFits[key]=f;vertexMap[q+'_'+j]=key;const ids=[...new Set(edges.filter(e=>e.from===Number(j)||e.to===Number(j)).flatMap(e=>[e.from,e.to]))];vertexReferences[key]=references(key,ids,f.indices)}

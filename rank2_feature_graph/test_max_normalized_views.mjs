@@ -74,7 +74,7 @@ run("el('sampleEmbedding').value='maxnorm-linf-local';el('coverage').value='70';
 assert.equal(el('sampleEmbedding').value,'maxnorm-linf');assert.equal(el('sampleFitScope').options[2].disabled,true);
 run("activeCohort='cohort1';el('sampleEmbedding').value='global';syncEmbeddingChoices()");
 assert.equal(el('sampleFitScope').value,'cohort');assert.equal(el('sampleFitScope').options[1].hidden,false);
-run("changeEmbeddingChoice('l1-euclidean','population')");assert.equal(el('sampleEmbedding').value,'reference');
+run("changeEmbeddingChoice('l1-euclidean','population')");assert.equal(el('sampleEmbedding').value,'local','Legacy population requests now use the available local selection');
 run("participant.active=true;participant.embeddingMode='union';syncEmbeddingChoices()");
 assert.equal(el('sampleMethod').disabled,true);assert.equal(el('sampleFitScope').disabled,true);assert.equal(el('sampleFitScope').value,'subject');
 run("participant.active=false;activeCohort='all';el('coverage').value='60';validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'previous'})");
@@ -107,3 +107,16 @@ assert.ok(run("embeddingStressDetails.get('sampleStress').scope.includes('no pai
 console.log('Coverage extension passed: all five levels, legacy bookmarks, missing selection and singleton error display.');
 
 assert.throws(()=>run("validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'previous',maxNormalizedLocalRevision:'level-100',cohort:'all',stateMode:'merged',selection:{...savedView.selection,embedding:'maxnorm-linf-local',selected:'3,7'}})"),/local embedding/,'A missing saved coverage must not fall back to the current control value');
+
+// Automatic policy is reapplied on every selection, clear, method and cohort change.
+run("activeCohort='all';activeStateMode='merged';selected='3,7';selectedVertex=null;el('coverage').value='60';el('sampleEmbedding').value='maxnorm-linf';applyAutomaticEmbedding()");
+assert.equal(el('sampleEmbedding').value,'maxnorm-linf-local');
+run("selected=null;applyAutomaticEmbedding()");assert.equal(el('sampleEmbedding').value,'maxnorm-linf');
+run("selected='3,7';activeCohort='cohort1';applyAutomaticEmbedding()");assert.equal(el('sampleEmbedding').value,'maxnorm-linf');
+run("activeCohort='all';activeStateMode='pure';applyAutomaticEmbedding()");assert.equal(el('sampleEmbedding').value,'maxnorm-linf');
+run("selected='missing';el('sampleEmbedding').value='local';applyAutomaticEmbedding()");assert.equal(el('sampleEmbedding').value,'reference');
+run("selected='3,7';applyAutomaticEmbedding()");assert.equal(el('sampleEmbedding').value,'local');
+run("selected=null;applyAutomaticEmbedding()");assert.equal(el('sampleEmbedding').value,'overview');
+assert.equal(run('preferredSampleEmbedding'),'local','Overview keeps a valid saved selection preference');
+assert.equal((html.match(/hidden aria-hidden="true">Saved fitting scope/g)||[]).length,2);
+console.log('PASS: automatic local selection, population fallback, method preservation, cohort/pure gates and hidden scope controls.');

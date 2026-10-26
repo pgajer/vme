@@ -20,7 +20,7 @@ function materializeEligiblePureView(bundle,cohort){
  function restricted(indices,original=null){
   const byProfile=original&&new Map(original.profiles.map((p,k)=>[p,original.coords[k]]));
   if(original&&JSON.stringify(original.profiles)!==JSON.stringify([...new Set(indices.map(i=>records[i].profile))].sort((a,b)=>a-b)))throw Error('Pure-state fit membership differs from eligible records');
-  return {...(original||{}),indices,n:indices.length,coords:indices.map(i=>byProfile?byProfile.get(records[i].profile):coords[i]),'relative.error':original?.evaluation?.relativeRms??null,
+  return {...(original||{}),fittingScope:original?'local':'population-restriction',indices,n:indices.length,coords:indices.map(i=>byProfile?byProfile.get(records[i].profile):coords[i]),'relative.error':original?.evaluation?.relativeRms??null,
    source:original?'Verified exact-membership pure-state fit from the corrected 100% catalogue; original solver provenance retained.':'Corrected population coordinates restricted to selected pure states; not a new subset fit.',
    pca:original?.pca||original?.provenance?.pca||{'90':null,'95':null,'99':null}};
  }
