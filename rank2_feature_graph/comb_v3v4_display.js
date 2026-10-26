@@ -86,7 +86,7 @@ function materializeCombDisplay(bundle,cohort,mode,q){
   graphs:Object.fromEntries(Object.keys(b.graphs).map(t=>[t,g])),coords3d:Object.fromEntries(Object.keys(b.graphs).map(t=>[t,nodes.map(n=>positions.get(n.id))])),
   overviewEmbeddings:Object.fromEntries(Object.keys(b.graphs).map(t=>[t,overview])),overviewEndpointProjections:Object.fromEntries(Object.keys(b.graphs).map(t=>[t,ref])),
   localEmbeddings,endpointProjections,pcaDimensions,vertexEmbeddings:{fits:vertexFits,mapping:vertexMap},vertexEndpointProjections:vertexReferences};
- const name=a.populations[pop].title;
+ const name=rebuiltOnlyPopulation()&&pop==='records'?'All cohorts':a.populations[pop].title;
  const meta={...bundle.dataset,analysisKey:`${x.revision}|${pop}|merged|${q}`,viewMode:'merged',populationName:name,observationUnit:'sample',observationLabel:'source records',
   description:name+' · record-weighted merged groups',overviewLabel:name+' · population embedding',globalLabel:'Selected population / restricted',
   overviewDescription:'All selected records retained. Duplicate compositions share coordinates; saved exact-membership fits are reused with their original provenance.',globalDescription:'Selected population embedding',
@@ -99,6 +99,12 @@ function materializeCombDisplay(bundle,cohort,mode,q){
   meta.description=name+' · '+x.sensitivityLabel+' · merged groups';
   meta.methods=x.methodsNote;
   meta.graphGeometryDescription=x.sensitivityMode==='fixed'?'Baseline reference graph retained; selected-record counts are descriptive and do not refit the graph.':'Reference catalogue, graph weights and endpoint maxima rebuilt after the sensitivity exclusion.';
+ }
+ if(rebuiltOnlyPopulation()){
+  meta.populationName=name;
+  meta.overviewLabel=name+' · population embedding';
+  meta.description=name+' · record-weighted merged groups';
+  meta.graphGeometryDescription='Reference graph weights and observed maxima use the eligible dataset population.';
  }
  const result={data,meta};if(combDisplayViews.size>=2)combDisplayViews.delete(combDisplayViews.keys().next().value);combDisplayViews.set(cacheKey,result);return result;
 }

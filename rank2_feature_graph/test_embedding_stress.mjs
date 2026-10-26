@@ -39,6 +39,8 @@ vm.runInContext(titleSource.slice(titleSource.indexOf('function standardSampleEm
 Object.assign(c,{META:{id:'comb-V3V4-tx'},DATA:{records:[{}]},activeCohort:'all',activeSensitivityMode:'rebuilt',maxNormalizedIsLocal:()=>el('sampleEmbedding').value.endsWith('-local')});
 el('sampleEmbedding').value='overview';
 assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts · Rebuilt reference · Sum-normalized Euclidean · Population 3D MDS');
+c.rebuiltOnlyPopulation=()=>true;
+assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts · Sum-normalized Euclidean · Population 3D MDS');
 for(const mode of ['local','global','reference']){el('sampleEmbedding').value=mode;assert.match(c.sampleEmbeddingTitle(),/^Sum-normalized Euclidean · /)}
 for(const [mode,metric] of [['maxnorm-euclidean','Euclidean'],['maxnorm-linf','L∞']])for(const [suffix,scope] of [['','Population'],['-local','Local']]){el('sampleEmbedding').value=mode+suffix;assert.equal(c.sampleEmbeddingTitle(),'Max-normalized '+metric+' · '+scope+' 3D MDS')}
 c.META.id='unreviewed-import';assert.match(c.standardSampleEmbeddingTitle('Saved embedding'),/^Normalization\/metric unspecified/);

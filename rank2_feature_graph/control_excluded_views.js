@@ -56,7 +56,7 @@ function materializeEligiblePureView(bundle,cohort){
  const data={...b,records,eligibleIndices:population,purePairs:pairs,samples:{ids:records.map(r=>r.id),pair:pairs,coords},referenceCoords,
   sampleTopFeatures:records.map(r=>b.sampleTopFeatures[r.profile]),graphs,coords3d,overviewEmbeddings,overviewEndpointProjections,
   localEmbeddings,endpointProjections,pcaDimensions,vertexEmbeddings:{fits:vertexFits,mapping:vertexMap},vertexEndpointProjections:vertexReferences};
- const title=a.populations[pop].title,meta={...bundle.dataset,analysisKey:a.revision+'|'+pop+'|pure',viewMode:'pure',populationName:title,observationUnit:'sample',observationLabel:'source records',
+ const title=rebuiltOnlyPopulation()&&pop==='records'?'All cohorts':a.populations[pop].title,meta={...bundle.dataset,analysisKey:a.revision+'|'+pop+'|pure',viewMode:'pure',populationName:title,observationUnit:'sample',observationLabel:'source records',
   description:title+' · control-excluded pure states',overviewLabel:title+' · restricted population coordinates',globalLabel:'Corrected population / restricted',
   overviewDescription:'Pure-state coverage is recomputed from eligible distinct profiles. Coordinates restrict the corrected population fit; this is not a separately fitted coverage subset.',
   globalDescription:'Eligible records only; verified corrected-population coordinates.',
@@ -71,6 +71,12 @@ function materializeEligiblePureView(bundle,cohort){
   meta.methods=x.methodsNote;
   meta.overviewDescription=(x.sensitivityMode==='fixed'?'Baseline pure-state catalogue is fixed.':'Pure-state coverage is rebuilt from retained distinct profiles.')+' Coordinates restrict the refitted selected population; this is not a separately fitted coverage subset.';
   meta.graphGeometryDescription=x.sensitivityMode==='fixed'?'Baseline graph geometry, weights and reference vertices retained, including external baseline references.':'Reference maxima and endpoint-distance graph geometry rebuilt after the sensitivity exclusion.';
+ }
+ if(rebuiltOnlyPopulation()){
+  meta.populationName=title;
+  meta.overviewLabel=title+' · population embedding';
+  meta.description=title+' · pure states';
+  meta.graphGeometryDescription='Reference graph weights and observed maxima use the eligible dataset population.';
  }
  const result={data,meta};if(cache.size>=2)cache.delete(cache.keys().next().value);cache.set(pop,result);return result;
 }

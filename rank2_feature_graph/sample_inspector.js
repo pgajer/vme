@@ -33,7 +33,11 @@ function updateSampleContext(indices){
  const edge=current().edges.find(e=>e.id===selected),node=current().nodes.find(n=>n.id===selectedVertex);
  const name=edge?`${edge.key}: ${edge.label}`:node?`Feature: ${node.label}`:'All displayed states';
  const target=DATA.assignment?`Reference core target: ${el('coverage').value}% (actual ${fmt(DATA.assignment.referenceCoreCoverage)}%)`:`Reference state target: ${el('coverage').value}%`;
- el('sampleContext').innerHTML=`<strong>${esc(name)}</strong><br>${esc(META.title)} · ${esc(META.populationName||'Full dataset')}<br>Plotted: ${esc(sampleCounts(indices))}<br>${esc(target)} · Selected population retained: ${fmt(current().coverage)}%`;
+ const counts=sampleCounts(indices).split(' · ');
+ // Source records are the sample-counting unit; compositions and people stay separate.
+ const recordSamples=META.observationLabel==='source records';
+ if(recordSamples)counts[0]=counts[0].replace('source records','samples');
+ el('sampleContext').innerHTML=`<strong>${esc(name)}</strong><ul>${counts.map((text,i)=>`<li${i===0&&recordSamples?' title="Samples count source records; repeated compositions remain separate samples."':''}>${esc(text)}</li>`).join('')}<li>${esc(target)}</li></ul>`;
  if(edge)el('sampleTitle').textContent=samplePanelTitle(sampleEmbeddingTitle(),edge.label);
  const c=assignmentComposition(indices),denominator=c.n||1,paired=c.states.filter(([pair])=>pair!==null).length,unpaired=c.states.find(([pair])=>pair===null)?.[1]||0;
  el('assignmentHeading').textContent=DATA.assignment?`Assignment composition · ${fmt(c.methods.core)} core / ${fmt(c.methods.rank3)} rank-3 / ${fmt(c.methods.knn)} neighbors`:`Original state composition · ${fmt(paired)} states${unpaired?' · '+fmt(unpaired)+' without a leading pair':''}`;

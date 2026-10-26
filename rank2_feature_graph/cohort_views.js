@@ -6,6 +6,7 @@ function cohortChoiceLabel(title){
  return ['Reference-matched abundance ≥90% — sensitivity','All control-excluded records'].includes(title)?'All':title;
 }
 function cohortControlHelp(){
+ if(META.id==='comb-V3V4-tx'&&typeof rebuiltOnlyPopulation==='function'&&rebuiltOnlyPopulation())return 'All includes every cohort in this dataset. Choosing an individual cohort restricts the same eligible samples. '+populationControlHelp();
  const base='Choose the population within the current dataset. Reference assignments and saved embeddings are retained.';
  return META.id==='comb-V3V4-tx'&&typeof activeSensitivityMode!=='undefined'&&activeSensitivityMode!=='baseline'
   ? 'All includes every cohort within the selected Population. Choosing an individual cohort restricts that same population. Fixed reference and Rebuilt reference both retain samples with at least 90% VALENCIA2 reference-matched abundance; see Population for the filter and reference definitions.'
@@ -21,7 +22,7 @@ function samplePanelTitle(method,selection='',cohortOverride=null){
  const key=typeof activeCohort==='undefined'?'all':activeCohort;
  const a=typeof analysisExtension==='function'?analysisExtension():null;
  const cohort=cohortOverride||(key==='all'?'All cohorts':a?.populations?.[key]?.title||META.populationName||key);
- const population=META.id==='comb-V3V4-tx'
+ const population=META.id==='comb-V3V4-tx'&&typeof rebuiltOnlyPopulation==='function'&&rebuiltOnlyPopulation()?'':META.id==='comb-V3V4-tx'
   ? ({baseline:'Current dataset',fixed:'Fixed reference',rebuilt:'Rebuilt reference'}[typeof activeSensitivityMode==='undefined'?'baseline':activeSensitivityMode]||'Current dataset')
   : 'Full dataset';
  return [cohort,population,method,selection].filter(Boolean).join(' · ');

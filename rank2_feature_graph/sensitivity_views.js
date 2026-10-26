@@ -109,7 +109,7 @@ function sensitivityReferenceNode(n,records,referenceRecords,mode){
 const sensitivityOriginalGraphNote=updateGraphLayoutNote;
 updateGraphLayoutNote=function(){
  sensitivityOriginalGraphNote();
- if(META.id!=='comb-V3V4-tx'||activeSensitivityMode==='baseline')return;
+ if(META.id!=='comb-V3V4-tx'||activeSensitivityMode==='baseline'||rebuiltOnlyPopulation())return;
  const fixed=activeSensitivityMode==='fixed';
  el('graphLayoutSummary').textContent+=' · '+(fixed?'Fixed-reference sensitivity':'Rebuilt-reference sensitivity');
  el('graphGeometryNote').textContent+=(fixed?
