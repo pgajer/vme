@@ -101,7 +101,7 @@ function resetAllDatasetGraphFading(){
  el('graphFadeBySize').checked=true;setGraphFadeStrength(.1);saveDatasetPanelSettings();graph();
  el('resetGraphFadingStatus').textContent=`Fading on at 0.10 for all datasets; ${result.updated} saved settings updated.`+(result.failed?` ${result.failed} settings could not be updated.`:'');
 }
-function graphNodeSize(degree,dimension=3){return (dimension===2?5:4)*Math.sqrt(degree>0?degree:.25)}
+function graphNodeSize(degree,dimension=3){return (dimension===2?5:4)*Math.sqrt(degree>0?degree:.25)*graphVertexScale()/100}
 function graphNodeHover(n,degree){return graphNodeLabel(n)+'\nDegree: '+degree+' (displayed top-2 connections)'}
 function graphFadeStrengthValue(value,fallback=.1){
  const n=typeof value==='number'||typeof value==='string'&&value.trim()!==''?Number(value):NaN;
@@ -145,6 +145,10 @@ function graphEdgeWidthGroups(g,classify){
  }
  return [...groups.values()].sort((a,b)=>Number(a.active)-Number(b.active)||a.width-b.width);
 }
+function graphVertexScaleValue(value){const n=Number(value);return Number.isFinite(n)&&n>=25&&n<=300?Math.round(n/5)*5:100}
+function graphVertexScale(){return graphVertexScaleValue(el('graphVertexScale')?.value)}
+function syncGraphVertexSizeControl(){if(el('graphVertexScaleValue'))el('graphVertexScaleValue').textContent=graphVertexScale()+'%'}
+function setGraphVertexScale(value){if(el('graphVertexScale'))el('graphVertexScale').value=String(graphVertexScaleValue(value));syncGraphVertexSizeControl()}
 function validGraphColor(value){return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)}
 function graphColorSettings(){return {vertex:validGraphColor(el('graphVertexColor')?.value)?el('graphVertexColor').value.toLowerCase():'#d62728',edge:validGraphColor(el('graphEdgeColor')?.value)?el('graphEdgeColor').value.toLowerCase():'#82a9b9'}}
 function restoreGraphColorSettings(settings){

@@ -10,6 +10,22 @@ const c=vm.createContext({el,current:()=>graph,activeEdge:e=>e.id===selected,esc
 vm.runInContext(fs.readFileSync(new URL('view_tools.js',import.meta.url),'utf8'),c);
 const run=s=>vm.runInContext(s,c),plain=x=>JSON.parse(JSON.stringify(x));
 const before=JSON.stringify({graph,lookup:[...lookup]});
+for(const percent of [25,100,180,300]){
+ c.setGraphVertexScale(percent);assert.equal(c.graphVertexScale(),percent);assert.equal(el('graphVertexScaleValue').textContent,percent+'%');
+ for(const dimension of [2,3]){
+  const base=dimension===2?5:4;
+  assert.equal(c.graphNodeSize(1,dimension),base*percent/100);
+  assert.equal(c.graphNodeSize(4,dimension)**2/c.graphNodeSize(1,dimension)**2,4,'Marker area stays proportional to degree');
+  assert(c.graphNodeSize(0,dimension)>0,'Isolated vertices remain visible');
+ }
+}
+for(const bad of [undefined,null,0,24,301,NaN,'bad']){c.setGraphVertexScale(bad);assert.equal(c.graphVertexScale(),100)}
+const smallGap=c.graphEdgeTraces(graph,lookup,p=>({x:p[0]*10,y:p[1]*10})).find(t=>t.customdata.includes('a')).x[0];
+c.setGraphVertexScale(200);
+const largeGap=c.graphEdgeTraces(graph,lookup,p=>({x:p[0]*10,y:p[1]*10})).find(t=>t.customdata.includes('a')).x[0];
+assert(largeGap>smallGap,'Larger vertices increase edge clearance');
+c.setGraphVertexScale();assert.equal(c.graphVertexScale(),100,'Older settings preserve the original sizes');
+
 assert.deepEqual(graph.edges.map(e=>c.graphEdgeWidth(e)),[6,3.5,1.5]);
 assert.equal(c.graphEdgeWidth(graph.edges[2],true),3.5);
 const subset={nodes:graph.nodes.slice(2),edges:[graph.edges[2]]};

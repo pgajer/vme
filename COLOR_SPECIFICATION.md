@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 14 · reviewed 26 October 2026.
+Specification version 15 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -88,6 +88,18 @@ their yellow-to-red scale, and non-subject edges remain gray. Vertex labels,
 3D sample colors and top-3 face colors retain their separate meanings. Fading
 still adjusts opacity. Changing graph colors preserves coordinates, widths,
 selection, counts and sample colors.
+
+## Graph vertex size
+
+**Vertex size** scales every graph marker radius/diameter together, from 25% to
+300% in steps of 5%. The default, 100%, preserves the original sizes. Marker
+area remains proportional to positive degree in the displayed top-2 graph;
+isolated vertices retain the existing small minimum marker. This control does
+not change degree, graph coordinates, sample points or edge widths. Edge gaps,
+label offsets and vertex picking use the scaled marker sizes.
+
+The setting applies in 2D and 3D, including participant graphs and exports,
+and persists per dataset and in named views. Older settings use 100%.
 
 ## Graph edge thickness
 
