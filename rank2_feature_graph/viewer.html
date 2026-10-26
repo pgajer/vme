@@ -213,8 +213,8 @@ body.panelMaximized{overflow:hidden}
 <div id="controlSections">
 <details id="dataControls" class="controlSection" open><summary>Data</summary><div class="sectionControls">
 <label>Dataset <select id="datasetSelect"></select></label>
-<label id="populationComparisonControl" hidden title="Sensitivity to omitting 548 records with less than 90% VALENCIA2 reference-matched abundance. This is separate from the reference-state coverage target and is not a sequencing-depth or biological-validity rule.">Population comparison <select id="populationComparison"><option value="baseline">Current dataset · 25,013 records</option><option value="fixed">Fixed reference · 24,465 records</option><option value="rebuilt">Rebuilt reference · 24,465 records</option></select></label>
-<details id="datasetMethodsPanel"><summary>Dataset methods</summary><p id="datasetMethods"></p></details>
+<label id="populationComparisonControl" hidden title="Sensitivity to omitting 548 records with less than 90% VALENCIA2 reference-matched abundance. This is separate from the reference-state coverage target and is not a sequencing-depth or biological-validity rule.">Population <select id="populationComparison"><option value="baseline">Current dataset · 25,013 records</option><option value="fixed">Fixed reference · 24,465 records</option><option value="rebuilt">Rebuilt reference · 24,465 records</option></select></label>
+<div id="datasetMethodsPanel" hidden><p id="datasetMethods"></p></div>
 <label>Cohort <select id="cohortSelect"></select></label>
 <button id="loadDataset" type="button">Load dataset bundle…</button>
 <small id="datasetMessage" role="status"></small>

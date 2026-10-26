@@ -3,12 +3,12 @@ function analysisExtension(){return datasetRegistry.get(META.id)?.cohortAnalysis
 function eligibleIndices(){return DATA.eligibleIndices||DATA.samples.ids.map((_,i)=>i)}
 function populationSize(){return DATA.eligibleIndices?.length??DATA.samples.ids.length}
 function cohortChoiceLabel(title){
- return title==='Reference-matched abundance ≥90% — sensitivity'?'All cohorts · ≥90% reference-matched abundance':title;
+ return ['Reference-matched abundance ≥90% — sensitivity','All control-excluded records'].includes(title)?'All':title;
 }
 function cohortControlHelp(){
  const base='Choose the population within the current dataset. Reference assignments and saved embeddings are retained.';
  return META.id==='comb-V3V4-tx'&&typeof activeSensitivityMode!=='undefined'&&activeSensitivityMode!=='baseline'
-  ? 'All cohorts combines the retained samples from every cohort. Each sample has at least 90% of its total abundance mapped to taxa in the VALENCIA2 reference. This retains 24,465 of 25,013 sample records; 548 are omitted. It is a reference-coverage filter, not CST classification confidence, sequencing depth, or proof of vaginal origin. Retained samples keep their full compositions, including unmatched taxa. Choosing an individual cohort restricts this same filtered population.'
+  ? 'All includes every cohort within the selected Population. Choosing an individual cohort restricts that same population. Fixed reference and Rebuilt reference both retain samples with at least 90% VALENCIA2 reference-matched abundance; see Population for the filter and reference definitions.'
   : base;
 }
 function syncAnalysisControls(){

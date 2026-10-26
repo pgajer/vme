@@ -45,10 +45,13 @@ function selectSensitivityData(mode){
  graphLayoutCache.clear();subjectEmbeddingCache.clear();subjectEmbeddingDecoded.clear();
  participantGraphCache=null;
 }
+function populationControlHelp(){
+ return 'Current dataset includes all 25,013 control-excluded sample records. Fixed reference and Rebuilt reference retain 24,465 records whose abundance mapped to taxa in the VALENCIA2 reference is at least 90%; 548 records are omitted. Fixed reference keeps the original reference states, assignments and graph. Rebuilt reference rebuilds them from the retained population. Cohort selects all cohorts or one cohort within this population. The 90% threshold is reference coverage, not CST classification confidence, sequencing depth, or proof of vaginal origin. Retained samples keep their full compositions, including unmatched taxa.';
+}
 function syncSensitivityControls(){
  const control=el('populationComparisonControl');
  control.hidden=!sensitivityBaseline||META.id!=='comb-V3V4-tx'||!!activeEmbeddingFamily;
- el('populationComparison').value=activeSensitivityMode;
+ el('populationComparison').value=activeSensitivityMode;el('populationComparison').title=populationControlHelp();
 }
 function sensitivityPaletteEdges(bundle){
  // Keep shared pair identities visually comparable when rebuilt edges disappear.

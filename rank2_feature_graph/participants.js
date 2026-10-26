@@ -659,7 +659,8 @@ async function participantSamples(){
 }
 function installControlHelp(){
  const explanations={
-  datasetSelect:'Select the dataset to explore. Dataset-specific cohorts, states and participants update together.',
+  datasetSelect:()=> 'Select the dataset to explore. Dataset-specific cohorts, states and participants update together. '+el('datasetMethods').textContent,
+  populationComparison:populationControlHelp,
   cohortSelect:cohortControlHelp,
   stateMode:()=>el('analysisMessage').textContent,
   coverage:()=>el('analysisMessage').textContent+' The percentage selects the reference core or retained pure states; it does not refit sample coordinates.',
