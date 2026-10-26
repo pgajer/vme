@@ -19,6 +19,9 @@ def digest(value):
 
 def population(package, manifest):
     from portable import checked_bytes
+    if manifest.get('seed', {}).get('fixedPopulations', {}).get('comb-V3V4-tx') == 'rebuilt':
+        part = json.loads(checked_bytes(package / 'web', manifest['datasets']['comb-V3V4-tx']['parts'][0]))
+        return dict(display=part['combDisplay'], records=dict(adapter=part['recordAdapters']['comb-V3V4-tx'], participants=part['participants']['comb-V3V4-tx']))
     for desc in manifest.get('sensitivity', {}).get('parts', []):
         part = json.loads(checked_bytes(package / 'web', desc))
         rebuilt = part.get('sensitivityComparisons', {}).get('rebuilt')

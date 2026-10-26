@@ -2,7 +2,7 @@
 installCombDisplay(BUNDLE_PACK);
 const datasetRegistry=new Map(BUNDLE_PACK.bundles.map(b=>[b.dataset.id,b]));
 initializeSensitivityState();
-selectSensitivityData(defaultPopulationComparison(META.id));
+if(META.id==='comb-V3V4-tx')selectSensitivityData(defaultPopulationComparison(META.id));
 let datasetSwitchRevision=0,activeCohort="all",activeStateMode="pure";
 const datasetKey=()=>META.id+'@'+META.revision+(META.analysisKey?'|'+META.analysisKey:'');
 const colorStorageKey=()=> 'rank2-edge-colors:'+META.id+'@'+META.revision;
@@ -79,7 +79,7 @@ async function switchDataset(id,{recall=true}={}){
  ++participantOpenRevision;
  await Promise.all([queue,graphQueue,typeof trajectoryQueue==='undefined'?Promise.resolve():trajectoryQueue]);
  if(revision!==datasetSwitchRevision)return;
- if(id!=='comb-V3V4-tx'&&activeSensitivityMode!=='baseline')selectSensitivityData('baseline');
+ if(id!=='comb-V3V4-tx'&&activeSensitivityMode!=='baseline'){if(rebuiltOnlyPopulation())activeSensitivityMode='baseline';else selectSensitivityData('baseline')}
  if(typeof saveDatasetPanelSettings==='function')saveDatasetPanelSettings();
  await leaveEmbeddingFamily(revision);
  if(revision!==datasetSwitchRevision)return;
@@ -122,6 +122,7 @@ async function ensureDatasetLoaded(id){
 async function ensureSensitivityLoaded(mode){
  if(mode==='baseline'||sensitivityVariants.has(mode))return;
  await ensureDatasetLoaded('comb-V3V4-tx');
+ if(rebuiltOnlyPopulation()){if(mode!=='rebuilt')throw Error('Population unavailable in the rebuilt-only package');return}
  if(typeof VME_ASSETS==='undefined')return;
  if(!sensitivityLoad)sensitivityLoad=(async()=>{
   const part=await VME_ASSETS.prepareSensitivity({combDisplay:sensitivityBaseline.display});

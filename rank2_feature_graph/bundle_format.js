@@ -1,5 +1,6 @@
 // Version 1 portable data contract. This validator is shared by browser and CLI.
 function validateBundle(bundle){
+ if(bundle?.data?.profileBankVersion!==undefined)return validateRebuiltProfileBank(bundle);
  const need=(ok,message)=>{if(!ok)throw new Error('Invalid dataset bundle: '+message)};
  const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
  const string=x=>typeof x==='string'&&x.length>0;
@@ -198,6 +199,10 @@ function validateParticipantSupplement(d,bundle,recordAdapter=null){
  d.features.forEach((name,j)=>need(name===bundle.data.featureNames[String(j+1)],'feature map'));
  need(Array.isArray(d.records)&&d.compositions&&typeof d.provenance?.auditSha256==='string','ledger and provenance');
  const seen=new Set();
+ if(bundle.dataset.fixedPopulation==='rebuilt'){
+  const pp=bundle.data.retainedProfileIds,observed=[...new Set(d.records.map(r=>r.profile))].sort((a,b)=>a-b);
+  need(d.records.length===24465&&JSON.stringify(observed)===JSON.stringify(pp)&&JSON.stringify(Object.keys(d.compositions).map(Number).sort((a,b)=>a-b))===JSON.stringify(pp),'restricted record/composition population');
+ }
  if(recordAdapter){
   need(recordAdapter.datasetRevision===bundle.dataset.revision&&recordAdapter.version===1&&recordAdapter.auditSha256===d.provenance.auditSha256,'record adapter identity');
   need(d.records.length===recordAdapter.records.length,'complete record ledger');
@@ -220,4 +225,34 @@ function validateParticipantSupplement(d,bundle,recordAdapter=null){
   for(const [j,v] of c){need(Number.isSafeInteger(j)&&j>last&&j<d.features.length&&finite(v)&&v>0,'sparse feature order/value');last=j;mass+=v}need(Math.abs(mass-1)<1e-10,'composition mass');
  }
  return d;
+}
+
+// Restricted source bank: null slots preserve historical fit keys without
+// retaining excluded observations. Active rows come solely from the record ledger.
+function validateRebuiltProfileBank(bundle){
+ const need=(ok,msg)=>{if(!ok)throw Error('Invalid rebuilt-reference bank: '+msg)};
+ const d=bundle.data,m=bundle.dataset,pp=d.retainedProfileIds;
+ const xyz=p=>Array.isArray(p)&&p.length===3&&p.every(Number.isFinite);
+ need(bundle.format==='rank2-explorer-bundle'&&bundle.version===1&&m.id==='comb-V3V4-tx'&&m.fixedPopulation==='rebuilt'&&d.profileBankVersion===1,'identity');
+ need(m.recordCount===24465&&m.profileCount===24412&&Array.isArray(pp)&&pp.length===24412&&pp.every((p,i)=>Number.isSafeInteger(p)&&p>=0&&(!i||p>pp[i-1])),'retained population');
+ const keep=new Set(pp),s=d.samples,N=s.ids.length;
+ need(pp.at(-1)<N&&s.pair.length===N&&s.coords.length===N&&d.sampleTopFeatures.length===N,'profile slots');
+ need(Object.keys(d.featureNames).length===m.featureCount,'feature dictionary');
+ const ids=new Set(),counts=new Map();
+ for(let i=0;i<N;i++){
+  if(!keep.has(i)){need(s.ids[i]===null&&s.pair[i]===null&&s.coords[i]===null&&d.sampleTopFeatures[i]===null,'excluded profile data');continue}
+  need(typeof s.ids[i]==='string'&&s.ids[i]&&!ids.has(s.ids[i])&&xyz(s.coords[i]),'profile identity/coordinates');ids.add(s.ids[i]);
+  need(typeof s.pair[i]==='string'&&/^\d+,\d+$/.test(s.pair[i]),'pure pair');
+  const top=d.sampleTopFeatures[i];need(Array.isArray(top)&&top.length>0&&top.length<=4&&top.every(v=>Array.isArray(v)&&typeof v[0]==='string'&&Number.isFinite(v[1])&&v[1]>=0&&v[1]<=100),'top features');
+  counts.set(s.pair[i],(counts.get(s.pair[i])||0)+1);
+ }
+ const g=d.graphs['100'],nodes=new Set(g.nodes.map(n=>n.id)),edges=new Set(g.edges.map(e=>e.id));
+ need(nodes.size===g.nodes.length&&edges.size===g.edges.length,'unique graph identities');
+ for(const n of g.nodes)need(keep.has(n.anchor_row)&&s.ids[n.anchor_row]===n.anchor_id&&typeof d.featureNames[n.id]==='string'&&Number.isFinite(n.maximum)&&n.maximum>=0&&n.maximum<=100,'retained reference vertex');
+ for(const e of g.edges)need(nodes.has(e.from)&&nodes.has(e.to)&&e.from<e.to&&e.id===e.from+','+e.to&&e.frequency===counts.get(e.id)&&Number.isFinite(e.length)&&e.length>=0,'rebuilt reference edge');
+ need([...counts.keys()].every(k=>edges.has(k)),'complete pure-state reference');
+ for(const q of ['60','70','80','90','100'])need(d.graphs[q]&&d.coords3d[q]?.length===g.nodes.length&&d.coords3d[q].every(xyz),'reference coverage scaffolding');
+ for(const key of ['overviewEmbeddings','overviewEndpointProjections','localEmbeddings','endpointProjections','vertexEndpointProjections','pcaDimensions'])need(d[key]&&Object.keys(d[key]).length===0,'historical fits must be absent');
+ need(Object.keys(d.vertexEmbeddings.mapping).length===0&&Object.keys(d.vertexEmbeddings.fits).length===0,'historical vertex fits must be absent');
+ return bundle;
 }

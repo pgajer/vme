@@ -149,6 +149,18 @@ def copy_file(source, destination):
         shutil.copy2(source, destination)
 
 
+def updated_launcher(package, instance):
+    launcher = (package / 'Start VME.command').read_text().replace('43817', '43818')
+    launcher = launcher.replace('/vme-health', '/vme-instance.txt').replace('VME-portable-2026-10-23', instance)
+    prior = package / 'web/vme-instance.txt'
+    if prior.is_file():
+        identity = prior.read_text().strip()
+        if not re.fullmatch(r'[a-f0-9]{64}', identity):
+            raise ValueError('Invalid packaged launcher identity')
+        launcher = launcher.replace(identity, instance)
+    return launcher
+
+
 def prepare(package, metadata_path, output, announce=True):
     if output.exists():
         raise ValueError('Choose a new output folder; existing copies are never overwritten')
@@ -233,8 +245,7 @@ def prepare(package, metadata_path, output, announce=True):
     shutil.copy2(package / 'vme-server', output / 'vme-server')
     instance = sha(encoded(dict(source=source_digest(HERE), metadata=sha(metadata_path.read_bytes()), package=sha(encoded(original)))))
     (outweb / 'vme-instance.txt').write_text(instance)
-    launcher = (package / 'Start VME.command').read_text().replace('43817', '43818')
-    launcher = launcher.replace('/vme-health', '/vme-instance.txt').replace('VME-portable-2026-10-23', instance)
+    launcher = updated_launcher(package, instance)
     (output / 'Start VME.command').write_text(launcher)
     (output / 'Start VME.command').chmod(0o755)
     receipt = dict(sourceSha256=source_digest(HERE), baseManifestSha256=sha(encoded(original)),

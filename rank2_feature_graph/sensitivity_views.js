@@ -1,7 +1,8 @@
-// One dataset, three explicit comparison populations; baseline is never mutated.
+// Archived packages expose comparison populations; current packages fix Rebuilt reference.
 let activeSensitivityMode='baseline',sensitivityBaseline=null;
+function rebuiltOnlyPopulation(){return BUNDLE_PACK.fixedPopulations?.['comb-V3V4-tx']==='rebuilt'}
 function defaultPopulationComparison(id){
- return id==='comb-V3V4-tx'&&(BUNDLE_PACK.sensitivityComparisons?.rebuilt||
+ return id==='comb-V3V4-tx'&&(rebuiltOnlyPopulation()||BUNDLE_PACK.sensitivityComparisons?.rebuilt||
   typeof VME_ASSETS!=='undefined'&&VME_ASSETS.manifest.sensitivity)?'rebuilt':'baseline';
 }
 const sensitivityVariants=new Map();
@@ -13,6 +14,7 @@ function initializeSensitivityState(){
  for(const field of ['recordAdapters','participants','qualityReadDepths','valencia2','trajectoryReferences'])
   sensitivityBaseline[field]=BUNDLE_PACK[field][id];
  }
+ if(rebuiltOnlyPopulation())sensitivityVariants.set('rebuilt',sensitivityBaseline);
  for(const [mode,item] of Object.entries(BUNDLE_PACK.sensitivityComparisons||{})){
   if(sensitivityVariants.has(mode))continue;
   const d=item.display,r=item.records,b={...bundle,data:{...bundle.data}};
@@ -33,6 +35,7 @@ function initializeSensitivityState(){
   .catch(error=>{syncSensitivityControls();datasetMessage(error.message)});
 }
 function selectSensitivityData(mode){
+ if(rebuiltOnlyPopulation()&&mode!=='rebuilt')throw Error('This package contains only the rebuilt-reference population. Open the archived VME version for baseline or fixed-reference views.');
  if(!sensitivityBaseline){if(mode!=='baseline')throw Error('Sensitivity views are not provisioned');return}
  const item=mode==='baseline'?sensitivityBaseline:sensitivityVariants.get(mode);
  if(!item)throw Error('Unknown population comparison');
@@ -46,19 +49,22 @@ function selectSensitivityData(mode){
  participantGraphCache=null;
 }
 function populationControlHelp(){
+ if(rebuiltOnlyPopulation())return '24,465 source records (24,412 distinct compositions), restricted to at least 90% VALENCIA2 reference-matched abundance. All retained compositions remain complete. Cohort selects all cohorts or one cohort. This reference-coverage restriction is not a biological-validity or CST-confidence certificate.';
  return 'Current dataset includes all 25,013 control-excluded sample records. Fixed reference and Rebuilt reference retain 24,465 records whose abundance mapped to taxa in the VALENCIA2 reference is at least 90%; 548 records are omitted. Fixed reference keeps the original reference states, assignments and graph. Rebuilt reference rebuilds them from the retained population. Cohort selects all cohorts or one cohort within this population. The 90% threshold is reference coverage, not CST classification confidence, sequencing depth, or proof of vaginal origin. Retained samples keep their full compositions, including unmatched taxa.';
 }
 function syncSensitivityControls(){
  const control=el('populationComparisonControl');
- control.hidden=!sensitivityBaseline||META.id!=='comb-V3V4-tx'||!!activeEmbeddingFamily;
+ control.hidden=rebuiltOnlyPopulation()||!sensitivityBaseline||META.id!=='comb-V3V4-tx'||!!activeEmbeddingFamily;
  el('populationComparison').value=activeSensitivityMode;el('populationComparison').title=populationControlHelp();
 }
 function sensitivityPaletteEdges(bundle){
+ if(bundle.dataset.fixedPopulation==='rebuilt'&&bundle.dataset.paletteEdgeIds)return bundle.dataset.paletteEdgeIds.map(id=>({id}));
  // Keep shared pair identities visually comparable when rebuilt edges disappear.
  return (sensitivityBaseline&&bundle.dataset.id==='comb-V3V4-tx'?
   sensitivityBaseline.bundle:bundle).data.graphs['100'].edges;
 }
 async function changeSensitivity(mode){
+ if(rebuiltOnlyPopulation()&&mode!=='rebuilt')throw Error('This package contains only the rebuilt-reference population. Use the archived version for this population.');
  const revision=++datasetSwitchRevision;
  // Returning to the displayed population must cancel a queued earlier change.
  if(mode===activeSensitivityMode){syncSensitivityControls();return}

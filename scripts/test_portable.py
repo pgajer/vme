@@ -11,6 +11,21 @@ import portable
 
 
 class PortableTests(unittest.TestCase):
+    def test_original_and_repackaged_launchers_follow_updated_instance(self):
+        with tempfile.TemporaryDirectory() as temp:
+            package=Path(temp);(package/'web').mkdir()
+            source="curl http://127.0.0.1:43817/vme-health | grep -qx 'VME-portable-2026-10-23'"
+            (package/'Start VME.command').write_text(source)
+            first=portable.updated_launcher(package,'a'*64)
+            self.assertIn('43818/vme-instance.txt',first)
+            self.assertIn("'"+'a'*64+"'",first)
+            (package/'Start VME.command').write_text(first)
+            (package/'web/vme-instance.txt').write_text('a'*64)
+            second=portable.updated_launcher(package,'b'*64)
+            self.assertIn("'"+'b'*64+"'",second)
+            self.assertNotIn('a'*64,second)
+            self.assertEqual((package/'Start VME.command').read_text(),first)
+
     def test_asset_identity_and_path_boundary(self):
         with tempfile.TemporaryDirectory() as temp:
             web = Path(temp); (web / 'vme-assets').mkdir()

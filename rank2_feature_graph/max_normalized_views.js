@@ -119,7 +119,9 @@ function syncEmbeddingChoices(){
   }
   scope.value=state.scope;scope.disabled=state.locked||(!localAvailable&&!(state.cohort&&state.method==='l1-euclidean'));
   scope.title=state.locked?'Fitting scope is fixed for this view.':localAvailable?'Population keeps saved full-population coordinates. Local selection uses an independent fit for the complete selected state or vertex union.':
+   !hasSelection()?'Population is the only fitting scope in this overview. Select an edge or vertex to use a saved local fit. Max-normalized local fits require All cohorts, Merged groups and 60% coverage.':
    'Local selection requires a matching saved fit. Max-normalized local fits: Rebuilt reference, All cohorts, Merged groups, 60% coverage.';
+  if(scope.parentElement)scope.parentElement.title=scope.title;
  }
 }
 function changeEmbeddingChoice(method,scope){

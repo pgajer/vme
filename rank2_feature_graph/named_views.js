@@ -92,12 +92,13 @@ function captureNamedViewSettings(includeNeighborhood=true){
 }
 function validateNamedView(view){
  const mode=view?.populationComparison||'baseline';
+ if(view?.dataset==='comb-V3V4-tx'&&rebuiltOnlyPopulation()&&(mode!=='rebuilt'||view.neighborhood))throw Error('This saved view requires the archived VME population. The current package contains only Rebuilt reference.');
  if(!['baseline','fixed','rebuilt'].includes(mode)||mode!=='baseline'&&(view.dataset!=='comb-V3V4-tx'||view.neighborhood))throw Error('Invalid population comparison');
  const previous=activeSensitivityMode;
  try{
   if(view?.dataset==='comb-V3V4-tx'&&mode!==previous)selectSensitivityData(mode);
   return validateNamedViewCurrent(view);
- }finally{if(activeSensitivityMode!==previous)selectSensitivityData(previous)}
+ }finally{if(activeSensitivityMode!==previous){if(rebuiltOnlyPopulation()&&previous==='baseline')activeSensitivityMode=previous;else selectSensitivityData(previous)}}
 }
 function validateNamedViewCurrent(view){
  if(view?.version!==1)throw Error('This saved view uses an unsupported version.');
