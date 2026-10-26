@@ -12,14 +12,16 @@
  const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
  // Keep the sample information preference separate from the four-panel layout.
  const infoArea=document.getElementById('sampleContent'),infoDivider=document.getElementById('sampleInfoDivider');
- const infoKey='vme-sample-information-size-v1',infoDefaults={width:.3,height:.4};
+ const infoKey='vme-sample-information-size-v1',infoDefaults={width:.3,height:.4,position:'right'};
+ const infoPosition=document.getElementById('sampleLegendPosition');
  let infoSize={...infoDefaults},infoDrag=null;
- try{const saved=JSON.parse((typeof datasetPanelStorage==='undefined'?localStorage:datasetPanelStorage).getItem(infoKey));for(const axis of ['width','height'])if(Number.isFinite(saved?.[axis]))infoSize[axis]=clamp(saved[axis],0,.65)}catch{}
+ try{const saved=JSON.parse((typeof datasetPanelStorage==='undefined'?localStorage:datasetPanelStorage).getItem(infoKey));for(const axis of ['width','height'])if(Number.isFinite(saved?.[axis]))infoSize[axis]=clamp(saved[axis],0,.65);if(['right','bottom'].includes(saved?.position))infoSize.position=saved.position}catch{}
  function infoLimits(){
-  const wide=window.getComputedStyle(infoDivider).cursor==='col-resize',axis=wide?'width':'height',rect=infoArea.getBoundingClientRect(),space=Math.max(1,rect[axis]-14);
+  const wide=infoSize.position==='right',axis=wide?'width':'height',rect=infoArea.getBoundingClientRect(),space=Math.max(1,rect[axis]-14);
   return {wide,axis,rect,space,min:Math.min(.3,(wide?180:80)/space),max:wide?.6:.65};
  }
  function applyInfo(persist=false){
+  infoArea.dataset.legendPosition=infoSize.position;infoPosition.value=infoSize.position;
   const l=infoLimits(),value=clamp(infoSize[l.axis],l.min,l.max);
   // Clamp the displayed size, without overwriting a preference on window resize.
   infoArea.style.setProperty('--info-'+l.axis,value+'fr');infoArea.style.setProperty('--plot-'+l.axis,(1-value)+'fr');
@@ -28,6 +30,9 @@
   infoDivider.setAttribute('aria-valuenow',Math.round(value*100));infoDivider.setAttribute('aria-valuetext',Math.round(value*100)+'% for information');
   if(persist)try{(typeof datasetPanelStorage==='undefined'?localStorage:datasetPanelStorage).setItem(infoKey,JSON.stringify(infoSize))}catch{}
  }
+ infoPosition.addEventListener('change',()=>{
+  infoSize.position=infoPosition.value==='bottom'?'bottom':'right';applyInfo(true);resizePlots();
+ });
  function finishInfo(event){
   if(!infoDrag||event.pointerId!==infoDrag.pointerId)return;
   infoDrag=null;if(infoDivider.hasPointerCapture(event.pointerId))infoDivider.releasePointerCapture(event.pointerId);
@@ -41,13 +46,13 @@
  infoDivider.addEventListener('pointermove',event=>{
   if(!infoDrag||event.pointerId!==infoDrag.pointerId)return;const l=infoLimits();
   if(l.axis!==infoDrag.axis){finishInfo(event);return}
-  infoSize[l.axis]=clamp(l.wide?(l.rect.left+l.rect.width-event.clientX-7)/l.space:(event.clientY-l.rect.top-7)/l.space,l.min,l.max);
+  infoSize[l.axis]=clamp(l.wide?(l.rect.left+l.rect.width-event.clientX-7)/l.space:(l.rect.top+l.rect.height-event.clientY-7)/l.space,l.min,l.max);
   applyInfo();resizePlots();
  });
  for(const name of ['pointerup','pointercancel','lostpointercapture'])infoDivider.addEventListener(name,finishInfo);
  infoDivider.addEventListener('dblclick',()=>{infoSize[infoLimits().axis]=infoDefaults[infoLimits().axis];applyInfo(true);resizePlots()});
  infoDivider.addEventListener('keydown',event=>{
-  const l=infoLimits(),grow=l.wide?'ArrowLeft':'ArrowDown',shrink=l.wide?'ArrowRight':'ArrowUp';
+  const l=infoLimits(),grow=l.wide?'ArrowLeft':'ArrowUp',shrink=l.wide?'ArrowRight':'ArrowDown';
   if(![grow,shrink,'Home','End'].includes(event.key))return;event.preventDefault();
   const current=clamp(infoSize[l.axis],l.min,l.max),step=event.shiftKey?.1:.02;
   infoSize[l.axis]=event.key==='Home'?l.min:event.key==='End'?l.max:clamp(current+(event.key===grow?step:-step),l.min,l.max);
@@ -221,7 +226,7 @@
    restore(){
     sizes={...defaults};infoSize={...infoDefaults};graphInfoSize=graphInfoDefault;collapsed=false;
     try{const current=datasetPanelStorage.getItem(storageKey),v=JSON.parse(current||datasetPanelStorage.getItem('rank2-explorer-panel-layout-v1')||datasetPanelStorage.getItem('comb-V3V4-tx-panel-layout-v1'));if(v&&Number.isFinite(v.left)&&Number.isFinite(v.top))sizes={left:current?v.left:1-v.left,top:v.top}}catch{}
-    try{const v=JSON.parse(datasetPanelStorage.getItem(infoKey));for(const axis of ['width','height'])if(Number.isFinite(v?.[axis]))infoSize[axis]=clamp(v[axis],0,.65)}catch{}
+    try{const v=JSON.parse(datasetPanelStorage.getItem(infoKey));for(const axis of ['width','height'])if(Number.isFinite(v?.[axis]))infoSize[axis]=clamp(v[axis],0,.65);if(['right','bottom'].includes(v?.position))infoSize.position=v.position}catch{}
     try{const v=JSON.parse(datasetPanelStorage.getItem(graphInfoKey));if(Number.isFinite(v))graphInfoSize=clamp(v,0,.7)}catch{}
     try{const v=JSON.parse(datasetPanelStorage.getItem(sidebarKey));if(typeof v?.collapsed==='boolean')collapsed=v.collapsed;for(const id of sectionIds)if(typeof v?.sections?.[id]==='boolean')document.getElementById(id).open=v.sections[id]}catch{}
     const target=datasetPanelStorage.getItem('vme-panel-maximized-v1')||'';
