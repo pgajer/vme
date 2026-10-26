@@ -147,7 +147,8 @@ function syncParticipantControls(){
  for(const id of ['participantVisitAppearance','participantSequence','participantTabs','participantHeaderControls','maximizedParticipantVisits','trajectoryBody','trajectoryContent','trajectoryNavigation','trajectoryVerticalControl','trajectoryRepresentationControl','trajectoryBarControls'])el(id).hidden=!active;
  for(const id of ['inspector','edgeSelect'])el(id).hidden=active;
  el('trajectoryThresholdControls').hidden=!active||trajectorySettings.representation!=='stacked';
- el('selectionTitle').textContent=active?'Subject trajectory':'Selected vertex or state';
+ el('selectionTitle').textContent='Subject trajectory';
+ if(typeof selectionPanelLayoutSync==='function')selectionPanelLayoutSync(active);
  for(const id of ['catalogueKind','exportCatalogue','catalogueControls','catalogueHelp','catalogueStatus','tableBox'])el(id).hidden=active&&!participant.catalogue;
  for(const id of ['participantCompositionArea','participantCompositionControls'])el(id).hidden=!active||participant.catalogue;
  if(active&&!participant.catalogue)el('catalogueTitle').textContent='Composition across visits';

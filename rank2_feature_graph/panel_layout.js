@@ -1,4 +1,5 @@
 // Panel sizing is independent of selections, coordinates and camera history.
+var selectionPanelLayoutSync=null;
 (function installPanelSizing(){
  if(typeof window==='undefined')return;
  const workspace=document.getElementById('panelWorkspace'),column=document.getElementById('columnDivider'),row=document.getElementById('rowDivider');
@@ -168,7 +169,7 @@
  toggle.addEventListener('click',()=>{collapsed=!collapsed;sidebar(true);toggle.focus({preventScroll:true})});
  for(const id of sectionIds)document.getElementById(id).addEventListener('toggle',saveSidebar);
  sidebar();
- const panelNames={featurePanel:'Features and top-2 CSTs graph',samplePanel:'3D sample view',cataloguePanel:'Edge catalogue',selectionPanel:'Subject trajectory or selected state'};
+ const panelNames={featurePanel:'Features and top-2 CSTs graph',samplePanel:'3D sample view',cataloguePanel:'Edge catalogue',selectionPanel:'Subject trajectory'};
  const panels=Object.keys(panelNames).map(id=>document.getElementById(id));
  let backgroundState=[],previousScroll=null;
  function restoreBackground(){for(const [node,inert] of backgroundState)node.inert=inert;backgroundState=[]}
@@ -215,6 +216,12 @@
   }
   applyInfo();applyGraphInfo();resizePlots();
  }
+ selectionPanelLayoutSync=show=>{
+  workspace.classList.toggle('subjectTrajectoryVisible',show);
+  document.getElementById('selectionDetails').hidden=show;document.getElementById('stateEdgeSelector').hidden=show;
+  if(!show&&maximized?.id==='selectionPanel')maximizePanel(maximized);
+ };
+ selectionPanelLayoutSync(participant.active);
  for(const panel of panels)document.getElementById('maximize-'+panel.id).addEventListener('click',()=>maximizePanel(panel));
  window.addEventListener('keydown',event=>{if(event.key==='Escape'&&maximized){event.preventDefault();maximizePanel(maximized)}});
  if(typeof datasetPanelStorage!=='undefined'){
@@ -229,7 +236,8 @@
     try{const v=JSON.parse(datasetPanelStorage.getItem(infoKey));for(const axis of ['width','height'])if(Number.isFinite(v?.[axis]))infoSize[axis]=clamp(v[axis],0,.65);if(['right','bottom'].includes(v?.position))infoSize.position=v.position}catch{}
     try{const v=JSON.parse(datasetPanelStorage.getItem(graphInfoKey));if(Number.isFinite(v))graphInfoSize=clamp(v,0,.7)}catch{}
     try{const v=JSON.parse(datasetPanelStorage.getItem(sidebarKey));if(typeof v?.collapsed==='boolean')collapsed=v.collapsed;for(const id of sectionIds)if(typeof v?.sections?.[id]==='boolean')document.getElementById(id).open=v.sections[id]}catch{}
-    const target=datasetPanelStorage.getItem('vme-panel-maximized-v1')||'';
+    let target=datasetPanelStorage.getItem('vme-panel-maximized-v1')||'';
+    if(target==='selectionPanel'&&!participant.active)target='';
     if(maximized?.id!==target){if(maximized)maximizePanel(maximized);if(panelNames[target])maximizePanel(document.getElementById(target))}
     sidebar();apply();
    }
