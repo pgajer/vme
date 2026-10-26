@@ -440,7 +440,7 @@ function renderStateColors(entries){
  sampleStateColorEntries=[...new Map(entries.map(e=>[e.kind+'|'+e.id,e])).values()];
  el('sampleStateColorCount').textContent=entries.length?'· '+sampleStateColorEntries.length:'';
  el('sampleStateColorRows').innerHTML=sampleStateColorEntries.map(e=>{
-  const color=e.kind==='pair'?edgeColor(e.id):rank3Hex(e.id),custom=e.kind==='pair'?edgeColors[e.id]:rank3Colors[META.id+'|'+e.id],label='Top-'+(e.kind==='pair'?'2':'3')+' CST · '+e.label;
+  const color=e.kind==='pair'?edgeColor(e.id):rank3Hex(e.id),custom=e.kind==='pair'?edgeColors[e.id]:rank3Colors[META.id+'|'+e.id],label=e.kind==='pair'?e.label:'Top-3 CST · '+e.label;
   return `<div class="stateColorRow"><label><input type="color" data-state-color="${esc(e.id)}" data-state-kind="${e.kind}" value="${color}" aria-label="Color ${esc(label)}"><span>${esc(label)}</span></label><button type="button" data-reset-state-color="${esc(e.id)}" data-state-kind="${e.kind}" title="Reset ${esc(label)} to its default color"${custom?'':' disabled'}>Reset</button></div>`;
  }).join('')||'<small>No state colors in this view. In Participant mode, enable state colors for the participant samples or background.</small>';
 }
