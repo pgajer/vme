@@ -101,7 +101,7 @@ function rank3Samples(){
  const z=ii.map(i=>corrected?DATA.referenceCoords[i]:b.samples.coords[rank3Profile(i)]);
  const colors=ii.map(i=>memberSet.has(i)?sampleDisplayColor(i,edgeColor(DATA.samples.pair[i])):'#d5dce0');
  updateSampleContext(ii);
- el('sampleTitle').textContent=(v.active?'Selected':'Displayed')+' top-3 CSTs — saved reference 3D embedding';
+ el('sampleTitle').textContent=samplePanelTitle('Saved reference 3D embedding',(v.active?'Selected':'Displayed')+' top-3 CSTs');
  el('sampleContext').innerHTML=`<strong>${rows.length} ${v.active?'selected':'displayed'} top-3 CSTs</strong><br>${esc(META.title)} · ${esc(META.populationName||'Full reference dataset')}<br>Members: ${esc(sampleCounts(members))}<br>Plotted: ${fmt(ii.length)} ${esc(META.observationLabel)}${rank3.background?' (nonmembers dimmed)':''}<br>Independent of rank-2 coverage; no sample refitting.`;
  el('sampleStatus').textContent='Saved full-reference sample coordinates, restricted by original top-three membership. Repeated records retain their identities. No new local fit; triangle area is not a measure of sample abundance.';
  if(rank3.color==='rank3')rank3Legend(members);else {const pairs=new Set(members.map(i=>DATA.samples.pair[i])),edges=new Map([...displayGraph(b.graphs['100'],b).edges,...current().edges].map(e=>[e.id,e]));renderSampleLegend([...pairs].map(id=>edges.get(id)).filter(Boolean))}

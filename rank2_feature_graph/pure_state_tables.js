@@ -98,7 +98,7 @@ function retainCandidateFrame(){if(!candidateActive())return;const scene=exportS
 function candidateSamples(){
  const rows=pureTableRows(true),indices=rows.filter(r=>r.checked).flatMap(r=>pureTableEvidence().indices.get(r.id)||[]),coords=candidateCoordinates(),z=indices.map(i=>coords[i]);
  el('scope').disabled=true;el('sampleEmbedding').disabled=true;el('panelSampleEmbedding').disabled=true;
- updateSampleContext(indices);el('sampleTitle').textContent=stateDisplayLabel(selected)+' — pure-state comparison · saved reference';
+ updateSampleContext(indices);el('sampleTitle').textContent=samplePanelTitle('Saved reference 3D embedding',stateDisplayLabel(selected)+' · pure-state comparison');
  el('sampleContext').innerHTML=`<strong>Pure-state comparison</strong><br>Seed: ${esc(stateDisplayLabel(selected))}<br>Plotted: ${esc(sampleCounts(indices))}<br>One saved reference embedding; selected candidates do not change assignments.`;
  el('sampleStatus').textContent='Pure-state comparison in one saved reference embedding. Checkboxes change visibility only; assignments and coordinates are unchanged. Diagnostic study on hold.';
  const selectedRows=rows.filter(r=>r.checked);el('sampleLegend').hidden=false;el('sampleLegendItems').innerHTML=selectedRows.map(r=>`<span class="legendItem"><span class="colorSwatch" style="background:${edgeColor(r.id)}"></span>${esc(r.label)} · ${fmt(r.n)}</span>`).join('');renderStateColors(selectedRows.map(r=>({kind:'pair',id:r.id,label:r.label})));
@@ -191,7 +191,7 @@ function pureCoverageSamples(){
  const label=nonCore?'Non-core pure states':'Core pure states',stateCount=new Set(ii.map(i=>DATA.samples.pair[i])).size;
  el('scope').value='core';el('scope').disabled=true;
  // Both sides use saved full-reference coordinates, not separate fitted embeddings.
- el('sampleTitle').textContent=label+' — fixed reference embedding';
+ el('sampleTitle').textContent=samplePanelTitle('Reference 3D embedding',label);
  el('sampleStatus').textContent=`${fmt(ii.length)} ${META.observationLabel} in ${fmt(stateCount)} original pure states at ${el('coverage').value}% reference coverage. Core: ${fmt(parts.core.length)}; non-core: ${fmt(parts.nonCore.length)}; without a catalogued pair: ${fmt(parts.unpaired.length)} (not plotted). Saved full-reference coordinates; no refitting or reassignment.${ii.length?'':' No samples in this category.'} The checkbox choice is remembered for this dataset and restored in the pure-state overview.`;
  renderSampleLegend(nonCore?[]:current().edges);
  if(nonCore){renderStateColors([]);el('sampleLegend').hidden=false;el('sampleLegend').setAttribute('aria-label','Non-core sample color legend');el('sampleLegendItems').innerHTML='<span class="legendItem"><span class="colorSwatch" style="background:#a8adb2"></span>Non-core pure-state samples</span>'}

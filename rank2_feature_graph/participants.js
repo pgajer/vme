@@ -599,7 +599,7 @@ async function participantSamples(){
  if(union){
   try{
    if(!savedSubjectEmbedding(scope)){
-    el('sampleTitle').textContent=rows[0].cohort+' · '+rows[0].subject+' — loading subject states…';
+    el('sampleTitle').textContent=samplePanelTitle('Loading subject-state embedding…',rows[0].subject,rows[0].cohort);
     el('sampleStatus').textContent='Preparing a joint 3D view of '+scope.records.length+' records in '+scope.states.length+' occupied states. Existing scientific results remain unchanged.';
     await Plotly.react('samples',[],{annotations:[{text:'Preparing joint embedding…',xref:'paper',yref:'paper',x:.5,y:.5,showarrow:false}]},{displayModeBar:false});
    }
@@ -608,7 +608,7 @@ async function participantSamples(){
    z=[];fit.profiles.forEach((p,i)=>z[p]=fit.coords[i]);
   }catch(error){
    if(!participant.active||participant.embeddingMode!=='union'||currentSubjectEmbeddingScope().context!==scope.context)return;
-   el('sampleTitle').textContent=rows[0].cohort+' · '+rows[0].subject+' — joint embedding unavailable';
+   el('sampleTitle').textContent=samplePanelTitle('Joint embedding unavailable',rows[0].subject,rows[0].cohort);
    el('sampleStatus').textContent=error.message+' Retry, or select Full reference under Sample appearance.';
    el('retrySubjectEmbedding').hidden=false;
    return Plotly.react('samples',[],{annotations:[{text:'Joint embedding unavailable · see Embedding and reference details',xref:'paper',yref:'paper',x:.5,y:.5,showarrow:false}]},{displayModeBar:false});
@@ -634,7 +634,7 @@ async function participantSamples(){
   marker:{symbol:'circle-open',size:Math.max(participant.sphereSize*1.6,participant.sphereSize+8)+6,color:'#000000',opacity:1,line:{color:'#000000',width:2}},
   hoverinfo:'skip',showlegend:false});
  updateSampleContext(rows.map(r=>r.index));
- el('sampleTitle').textContent=rows[0].cohort+' · '+rows[0].subject+(union?' — subject states':' — fixed reference embedding');
+ el('sampleTitle').textContent=samplePanelTitle(union?'Subject-state joint 3D MDS':'Reference 3D embedding',rows[0].subject,rows[0].cohort);
  el('sampleContext').textContent='';
  el('sampleStatus').textContent=union&&fit.historical?`${scope.records.length} cohort records in ${scope.states.length} occupied states; ${fit.profiles.length} distinct compositions. Exact population matches an existing saved embedding; its original solver provenance is retained. No refitting or assignment changes.`:union?`${scope.records.length} cohort records in ${scope.states.length} occupied ${activeStateMode==='merged'?'merged groups':'pure states'}; ${fit.distinctCompositions} distinct compositions. Full-composition Euclidean metric MDS · ${fit.solver.backend||'exact'} · ${fit.solver.epochs} epochs. Relative RMS distance error: ${(fit.evaluation.relativeRms*100).toFixed(1)}% (${fit.evaluation.pairs} evaluated pairs). Taxon labels mark observed maxima within these states. Assignments are unchanged; colors and endpoint-placement rules do not determine membership. ${fit.solver.termination}`:'Participant mode uses the saved '+META.title+' reference embedding. Background shows the selected cohort, including records without participant links. Ordinal labels do not measure elapsed time. No coordinates or assignments are recalculated.';
  el('sampleLegend').hidden=false;el('sampleLegendItems').innerHTML=participantColorMode()==='visit'?(d.capabilities?.arbitraryVisits?[...new Map(rows.map(r=>[r.label,participantVisitColor(r)])).entries()]:Object.entries(participantColors)).map(([label,color])=>`<span class="legendItem"><span class="colorSwatch" style="background:${color}"></span>${esc(label)}</span>`).join(''):'';

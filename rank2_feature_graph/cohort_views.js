@@ -11,6 +11,26 @@ function cohortControlHelp(){
   ? 'All includes every cohort within the selected Population. Choosing an individual cohort restricts that same population. Fixed reference and Rebuilt reference both retain samples with at least 90% VALENCIA2 reference-matched abundance; see Population for the filter and reference definitions.'
   : base;
 }
+function samplePanelTitle(method,selection='',cohortOverride=null){
+ const key=typeof activeCohort==='undefined'?'all':activeCohort;
+ const a=typeof analysisExtension==='function'?analysisExtension():null;
+ const cohort=cohortOverride||(key==='all'?'All cohorts':a?.populations?.[key]?.title||META.populationName||key);
+ const population=META.id==='comb-V3V4-tx'
+  ? ({baseline:'Current dataset',fixed:'Fixed reference',rebuilt:'Rebuilt reference'}[typeof activeSensitivityMode==='undefined'?'baseline':activeSensitivityMode]||'Current dataset')
+  : 'Full dataset';
+ return [cohort,population,method,selection].filter(Boolean).join(' · ');
+}
+function sampleEmbeddingTitle(overview=false){
+ const mode=el('sampleEmbedding').value;
+ if(mode==='maxnorm-euclidean')return 'Max-normalized Euclidean 3D MDS';
+ if(mode==='maxnorm-linf')return 'Max-normalized L∞ 3D MDS';
+ if(mode==='reference')return 'Reference 3D embedding';
+ if(!overview)return mode==='local'?'Local 3D MDS':'Global 3D embedding';
+ if(META.id==='comb-V3V4-tx'&&DATA.records)return 'Population 3D MDS';
+ let method=META.overviewLabel||'Saved 3D embedding';
+ for(const separator of [' · ',' — '])if(META.populationName&&method.startsWith(META.populationName+separator))method=method.slice(META.populationName.length+separator.length);
+ return method;
+}
 function syncAnalysisControls(){
  const a=analysisExtension(),records=recordExtension();
  el('explorerDescription').textContent=activeStateMode==='merged'?'Vertices are features; edges name reference core groups. Merged groups retain every selected record. Select an edge or vertex to inspect samples; clear the selection for the overview.':'Vertices are features; edges group samples by their unordered leading pair. Coverage selects retained states. Select an edge or vertex to inspect samples; clear the selection for the overview.';
