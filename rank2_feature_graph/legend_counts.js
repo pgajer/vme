@@ -87,6 +87,12 @@ function renderCountedSampleLegend(){
  const rows=legendRows(eligible,e=>{
   const group=isParticipant?(e.background?'Background (excluding participant samples)':'Participant samples'):'';
   if(nonCore)return {id:'non-core',label:'Non-core pure-state samples',color:'#a8adb2'};
+  if(typeof sampleColorCategory==='function'&&sampleColorBundle()){
+   if(isParticipant&&e.background&&!participant.stateBackground)return {id:'background',label:'Background samples',color:'#c9d2d7',group};
+   const category=sampleColorCategory(e.index,isParticipant||DATA.records?e.record:null,e.profile,{background:e.background});
+   if(category?.pair)return {...pairValue(category.id,category.original),group,...(e.background&&category.id===participantBackgroundPair(e.record)?{backgroundPair:category.id,checked:participantBackgroundHighlight?.pairs.includes(category.id)}:{})};
+   if(category)return {...category,label:sampleColorMode()==='rank3'?legendCstLabel(category.id,bundle,recordMode,category.label):category.label,group};
+  }
   if(valencia){const a=valenciaProfile(e.profile),id=a?.[sub?'subCST':'cst'];return {id,label:id,color:(sub?valenciaSubtypeColors:valenciaCstColors)[id]||'#7c878d',group}}
   if(triples){const id=tripleBase.membership[e.profile],r=tripleBase.byId.get(id);return {id,label:r?legendCstLabel(id,bundle,recordMode,r.key+': '+r.label):null,color:rank3Color(id)}}
   if(isParticipant){
@@ -98,9 +104,9 @@ function renderCountedSampleLegend(){
   const original=candidates||components&&DATA.samples.pair[e.index]===selected,id=original?(DATA.purePairs||DATA.samples.pair)[e.index]:DATA.samples.pair[e.index];
   return {...pairValue(id,original),group:components?(original?'Original pure states in selected group':'Other displayed groups'):''};
  });
- const title=valencia?'VALENCIA2 '+(sub?'subtypes':'CSTs'):triples?'Top-3 CSTs':isParticipant?'Participant and background categories':'Top-2 CSTs';
+ const title=typeof sampleColorTitle==='function'&&sampleColorBundle()&&!nonCore?sampleColorTitle():valencia?'VALENCIA2 '+(sub?'subtypes':'CSTs'):triples?'Top-3 CSTs':isParticipant?'Participant and background categories':'Top-2 CSTs';
  let html=legendTable(rows,population,{title,controls:isParticipant&&!valencia,note:'Counts include displayed background samples once.'+(!valencia&&!nonCore&&legendAbundanceTotals[META.id]?' CST component names follow their total relative abundance across the full eligible dataset, using the counting unit above.':'')});
- if(isParticipant&&!valencia&&participant.stateBackground){
+ if(isParticipant&&!valencia&&participant.stateBackground&&rows.some(r=>r.backgroundPair!=null)){
   // Retain the existing highlight interaction without counting its ring overlay.
   html+='<small>Background checkboxes ring matching background records; counts do not change.</small>';
   if(participantBackgroundHighlight?.pairs.length)html+='<button type="button" data-clear-background-highlight>Clear all highlights</button>';

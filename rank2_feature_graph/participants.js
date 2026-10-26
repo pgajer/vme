@@ -592,7 +592,7 @@ function highlightParticipantBackground(pair,checked){
  participantBackgroundHighlight=pairs.size?{context,pairs:[...pairs].sort()}:null;
  return refreshSamples(camera);
 }
-function participantSampleColor(r){const color=participantColorMode()==='visit'?participantVisitColor(r):edgeColor(participantColorPair(r));return typeof valenciaColorForProfile==='function'?valenciaColorForProfile(r.profile,color):color}
+function participantSampleColor(r){const color=participantColorMode()==='visit'?participantVisitColor(r):edgeColor(participantColorPair(r));return typeof samplePaletteColor==='function'?samplePaletteColor(r.index,color,r,r.profile):color}
 async function participantSamples(){
  const rows=participantRows();if(!rows.length){participantRestore(null);return samples()}
  const d=participantData(),b=datasetRegistry.get(META.id),union=participant.embeddingMode==='union',scope=union?currentSubjectEmbeddingScope():null;
@@ -619,7 +619,7 @@ async function participantSamples(){
  const legendOpen=el('sampleLegendItems').querySelector?.('[data-background-legend]')?.open||false;
  if(!participant.stateBackground||participantBackgroundHighlight?.context!==participantBackgroundContext())participantBackgroundHighlight=null;
  const background=union?scope.records:d.records.filter(r=>r.cohort===rows[0].cohort),xyz=rs=>({x:rs.map(r=>z[r.profile][0]),y:rs.map(r=>z[r.profile][1]),z:rs.map(r=>z[r.profile][2])});
- const traces=[{type:'scatter3d',mode:'markers',meta:{participantBackground:true,legendRecords:background.map(r=>r.index)},...xyz(background),marker:{size:participant.backgroundSize,color:participant.stateBackground?background.map(r=>typeof valenciaColorForProfile==='function'?valenciaColorForProfile(r.profile,edgeColor(participantBackgroundPair(r))):edgeColor(participantBackgroundPair(r))):'#c9d2d7',opacity:participant.backgroundOpacity},hoverinfo:'skip',showlegend:false},
+ const traces=[{type:'scatter3d',mode:'markers',meta:{participantBackground:true,legendRecords:background.map(r=>r.index)},...xyz(background),marker:{size:participant.backgroundSize,color:participant.stateBackground?background.map(r=>typeof samplePaletteColor==='function'?samplePaletteColor(r.index,edgeColor(participantBackgroundPair(r)),r,r.profile,true):edgeColor(participantBackgroundPair(r))):'#c9d2d7',opacity:participant.backgroundOpacity},hoverinfo:'skip',showlegend:false},
  {type:'scatter3d',mode:participant.showLabels?'markers+text':'markers',meta:{legendRecords:rows.map(r=>r.index)},...xyz(rows),customdata:rows.map(r=>'participant:'+r.index),text:rows.map(r=>!participant.selectedLabelOnly||r.index===participant.record?r.label:''),textposition:'top center',textfont:{size:participant.labelSize},hovertext:rows.map(participantSampleHover),hovertemplate:'%{hovertext}<extra></extra>',marker:{size:rows.map(r=>r.index===participant.record?Math.max(participant.sphereSize*1.6,participant.sphereSize+8):participant.sphereSize),color:rows.map(participantSampleColor),line:{color:'white',width:1}},showlegend:false}];
  const ranges=[0,1,2].map(k=>{const a=(union?fit.coords:z).map(p=>p[k]);return [Math.min(...a),Math.max(...a)]}),span=Math.max(...ranges.map(([a,b])=>b-a));
  for(const s of participant.showLines?participantSegments(rows):[]){
@@ -799,8 +799,8 @@ function installParticipants(){
   saveParticipantAppearance(key);syncParticipantControls();return refreshSamples(camera);
  };
  el('participantColorBy').onchange=()=>{
-  const mode=el('participantColorBy').value;if(!participant.active||!['visit','original','merged'].includes(mode)||mode==='merged'&&activeStateMode!=='merged')return;
-  const camera=pendingSampleCamera||readCamera('samples');participant.colorBy=mode;saveParticipantAppearance('colorBy');return refreshSamples(camera);
+  const mode=el('participantColorBy').value;if(!participant.active||!['visit','original','merged'].includes(mode)||mode==='merged'&&!(typeof sampleMergedColors==='function'?sampleMergedColors():activeStateMode==='merged'))return;
+  const camera=pendingSampleCamera||readCamera('samples');participant.colorBy=mode;saveParticipantAppearance('colorBy');if(typeof recolorSampleView==='function'){el('sampleColorScheme').value={visit:'visits',original:'pure',merged:'default'}[mode];return recolorSampleView()}return refreshSamples(camera);
  };
  el('participantMatchBackground').onchange=()=>{
   if(!participant.active)return;const camera=pendingSampleCamera||readCamera('samples');

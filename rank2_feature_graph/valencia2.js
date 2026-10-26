@@ -7,6 +7,89 @@ function moveValenciaControls(){
 if(el('participantSection').parentElement)moveValenciaControls();
 const valenciaSubtypeColors={'I-A':'#ff6868','I-B':'#ffd4da','II':'#b4ff68','III-A':'#ffbc6b','III-B':'#e4a67b','IV-A':'#c1adec','IV-B':'#91a8ed','IV-C0':'#989898','IV-C1':'#ffc0cb','IV-C2':'#a8e5e5','IV-C3':'#9acc9a','IV-C4':'#800080','V':'#ffff71'};
 const valenciaCstColors={'I':'#df5555','II':'#64a52d','III':'#ed993b','IV-A':'#9a7bc4','IV-B':'#5477c7','IV-C':'#737373','V':'#b6a616'};
+// Color identities are independent of graph selection and fitted coordinates.
+const sampleCohortCache=new WeakMap();
+function sampleColorBundle(){return typeof datasetRegistry==='undefined'?null:datasetRegistry.get(META.id)}
+function sampleMergedColors(){return sampleColorBundle()?.cohortAnalysis?.merged?.[el('coverage').value]||null}
+function sampleColorMode(){return el('sampleColorScheme').value||'default'}
+function sampleColorTitle(){
+ const mode=sampleColorMode();
+ return mode==='default'?el('coverage').value+'% 2-CSTs':mode==='pure'?'Pure 2-CSTs':mode==='cohorts'?'Cohorts':mode==='visits'?'Visit colors':mode==='rank3'?'Top-3 CSTs':mode==='valencia2-subtype'?'VALENCIA2 subCSTs':'VALENCIA2 CSTs';
+}
+function sampleColorHelp(){
+ const help={default:'Merged 2-CST assignments at the current reference-core target. The percentage describes reference-core coverage, not the abundance of the named pair in each sample.',pure:'Original, unmerged top-two-taxa assignments. Pure does not mean that a sample contains only two taxa.',cohorts:'Recorded cohort membership. Missing metadata is Unclassified. A composition shared across cohorts is labeled Multiple cohorts when records are represented by a single point.',visits:'Participant visit labels or order. Available during a participant trajectory; background samples retain their state colors or gray background setting.',rank3:'Original top-three-taxa assignments; coloring does not change the selected samples.', 'valencia2-cst':'Saved VALENCIA2 CST annotations; no classifications are recalculated.','valencia2-subtype':'Saved VALENCIA2 subCST annotations; no classifications are recalculated.'};
+ return (help[sampleColorMode()]||help.default)+' Changing colors preserves samples, selection, and embedding coordinates.';
+}
+function sampleCohortModel(){
+ const bundle=sampleColorBundle();if(!bundle)return null;
+ const source=bundle.cohortAnalysis?.records||BUNDLE_PACK.recordAdapters?.[META.id]?.records||BUNDLE_PACK.participants?.[META.id]?.records||[];
+ const annotations=BUNDLE_PACK.annotations?.[META.id]?.records;
+ const cached=sampleCohortCache.get(bundle);if(cached?.source===source&&cached.annotations===annotations)return cached;
+ const reviewed=new Map((annotations||[]).map(r=>[r.id,r.cohort]));
+ const byProfile=new Map(),byId=new Map();
+ for(const original of source){const r={...original,cohort:reviewed.get(original.id)??original.cohort};byId.set(r.id,r);if(!byProfile.has(r.profile))byProfile.set(r.profile,new Set());byProfile.get(r.profile).add(r.cohort||null)}
+ const model={source,annotations,byProfile,byId};sampleCohortCache.set(bundle,model);return model;
+}
+function sampleCohortColor(id){
+ if(!id)return '#7c878d';if(id==='Multiple cohorts')return '#686868';
+ let hash=0;for(const c of id)hash=(hash*31+c.charCodeAt(0))>>>0;
+ return `hsl(${hash*137.508%360},58%,42%)`;
+}
+function sampleColorCategory(index,record=null,profile=null,{background=false}={}){
+ const bundle=sampleColorBundle();if(!bundle)return null;
+ record=record||DATA.records?.[index];profile=profile??record?.profile??index;
+ const mode=sampleColorMode(),pure=bundle.data.samples.pair[profile];
+ if(mode==='cohorts'){
+  const model=sampleCohortModel(),r=record?model.byId.get(record.id)||record:null,cohorts=model.byProfile.get(profile);
+  const id=r?(r.cohort||null):cohorts?.size===1?[...cohorts][0]:cohorts?.size>1?'Multiple cohorts':null;
+  return {id,label:id,color:sampleCohortColor(id)};
+ }
+ if(mode==='visits'&&!background&&participant.active&&record)return {id:record.label||null,label:record.label,color:participantVisitColor(record)};
+ if(mode.startsWith('valencia2-')){const a=valenciaProfile(profile),sub=mode==='valencia2-subtype',id=a?.[sub?'subCST':'cst'];return {id,label:id,color:(sub?valenciaSubtypeColors:valenciaCstColors)[id]||'#7c878d'}}
+ if(mode==='rank3'){const base=rank3Base(),id=base.membership[profile];return {id,label:base.byId.get(id)?.label,color:rank3Color(id)}}
+ const original=mode==='pure'||mode==='visits'&&activeStateMode==='pure';
+ const merged=sampleMergedColors(),id=original?pure:merged?(merged.pairs?.[profile]??null):pure;
+ return {id,label:id==null?null:pairName(id),color:id==null?'#7c878d':edgeColor(id),pair:true,original};
+}
+function samplePaletteColor(index,fallback,record=null,profile=null,background=false){
+ if(['#93b3c1','#d5dce0'].includes(fallback))return fallback;
+ return sampleColorCategory(index,record,profile,{background})?.color||fallback;
+}
+function syncSampleColorOptions(){
+ if(!sampleColorBundle())return;
+ const select=el('sampleColorScheme'),merged=!!sampleMergedColors(),available=!!valenciaAsset();
+ const options=[['default',el('coverage').value+'% 2-CSTs',merged],['pure','Pure 2-CSTs',true],['cohorts','Cohorts',true],['visits','Visit colors',participant.active],['rank3','Top-3 CSTs',rank3.enabled],['valencia2-cst','VALENCIA2 CSTs',available],['valencia2-subtype','VALENCIA2 subCSTs',available]];
+ for(const [value,label,enabled] of options){const option=Array.from(select.options).find(o=>o.value===value);if(option){option.textContent=label;option.disabled=!enabled;option.hidden=!enabled&&value!=='default'}}
+ if(!options.some(([value,,enabled])=>enabled&&value===select.value))select.value=merged?'default':'pure';
+ select.title=sampleColorHelp();
+ for(const option of Array.from(select.options)){const old=select.value;select.value=option.value;option.title=sampleColorHelp();select.value=old}
+ el('sampleColorHelp').textContent=sampleColorHelp();
+ const mode=sampleColorMode(),legacy={default:'merged',pure:'original',visits:'visit'}[mode];
+ el('participantColorBy').disabled=!participant.active||!legacy;
+ if(legacy){el('participantColorBy').value=legacy;el('participantColorBy').options[2].disabled=!merged}
+ el('participantColorBy').title='The same coloring choice as Color by above. Use Color by for Cohorts or VALENCIA2.';
+}
+async function recolorSampleView(){
+ // Wait for an in-flight selection render, then update only marker colors.
+ if(typeof queue!=='undefined')await queue;
+ syncSampleColorOptions();
+ const plot=el('samples'),records=typeof participantData==='function'?participantData()?.records:[],byIndex=new Map((records||[]).map(r=>[r.index,r]));
+ for(let k=0;k<(plot.data||[]).length;k++){
+  const trace=plot.data[k];if(!trace.mode?.includes('markers')||trace.meta?.edgeFaceRings)continue;
+  let colors;
+  if(trace.meta?.legendRecords){
+   const background=!!trace.meta.participantBackground;
+   colors=background&&!participant.stateBackground?'#c9d2d7':trace.meta.legendRecords.map(i=>{const r=byIndex.get(i);return samplePaletteColor(i,'#7c878d',r,r?.profile,background)});
+  }else if(trace.meta?.sampleView&&trace.ids){
+   if(typeof pureCoverageActive==='function'&&pureCoverageActive()&&pureCoverageComparison.nonCore)continue;
+   colors=participant.sampleColors===false?'#a8adb2':trace.ids.map((id,j)=>samplePaletteColor(Number(id),Array.isArray(trace.marker.color)&&['#93b3c1','#d5dce0'].includes(trace.marker.color[j])?trace.marker.color[j]:'#7c878d'));
+  }else continue;
+  await Plotly.restyle(plot,{'marker.color':[colors]},[k]);
+ }
+ syncValenciaControls();renderCountedSampleLegend();
+ if(typeof sampleRenderedKey!=='undefined')sampleRenderedKey=sampleViewKey();
+ if(typeof saveDatasetPanelSettings==='function')saveDatasetPanelSettings();
+}
 function valenciaAsset(){return BUNDLE_PACK.valencia2?.[META.id]||null}
 function valenciaActive(){return !!valenciaAsset()&&['valencia2-cst','valencia2-subtype'].includes(el('sampleColorScheme').value)}
 function valenciaProfile(profile){return valenciaAsset()?.profiles[profile]||null}
@@ -16,7 +99,7 @@ function valenciaColorForProfile(profile,fallback){
  const a=valenciaProfile(profile);if(!a)return '#7c878d';
  return el('sampleColorScheme').value==='valencia2-subtype'?valenciaSubtypeColors[a.subCST]:valenciaCstColors[a.cst];
 }
-function valenciaSampleColor(i,fallback){return fallback==='#93b3c1'?fallback:valenciaColorForProfile(valenciaSampleProfile(i),fallback)}
+function valenciaSampleColor(i,fallback){return sampleColorBundle()?samplePaletteColor(i,fallback):fallback==='#93b3c1'?fallback:valenciaColorForProfile(valenciaSampleProfile(i),fallback)}
 function valenciaHover(profile,recordId=null,asset=valenciaAsset()){
  const a=asset?.profiles[profile];if(!a)return '';
  const record=recordId?valenciaRecordMap().get(recordId):null;
@@ -48,11 +131,14 @@ function valenciaRecordMap(){
 }
 function syncValenciaControls(){
  const available=!!valenciaAsset();
- el('valenciaColorControls').hidden=!available;
+ el('valenciaColorControls').hidden=false;
+ syncSampleColorOptions();
  el('exportValencia2').disabled=!available;
  el('valenciaExportDescription').textContent=available?`Exports all ${valenciaAsset().records.length.toLocaleString('en-US')} source records for ${META.id}, diagnostics and reconciled historical labels—not only the current view.`:'';
  el('rank3SampleColor').disabled=valenciaActive();
- if(!valenciaActive())el('sampleLegend').setAttribute('aria-label','Sample color legend');
+ el('participantMatchBackground').disabled=true;
+ el('participantMatchBackground').parentElement?.setAttribute('title','Background colors now follow Color by automatically. Visit colors use the current States mode for backgrounds. Turn off Background state colors for gray.');
+ if(!valenciaActive()){el('sampleLegend').setAttribute('aria-label','Sample color legend');el('sampleStateColorMessage').textContent='';}
 }
 function renderValenciaLegend(){
  syncValenciaControls();
@@ -74,10 +160,7 @@ function valenciaCsv(asset=valenciaAsset()){
  if(asset.eligibilityRevision){header.push('eligibility_revision');rows.forEach(row=>row.push(asset.eligibilityRevision))}
  return [header,...rows].map(row=>row.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\r\n')+'\r\n';
 }
-el('sampleColorScheme').onchange=()=>{
- if(!valenciaActive()){el('sampleStateColorMessage').textContent='';el('sampleLegend').setAttribute('aria-label','Sample color legend');syncRank3Controls();}
- refreshSamples(readCamera('samples'));
-};
+el('sampleColorScheme').onchange=()=>recolorSampleView().catch(error=>{el('sampleStatus').textContent=error.message;console.error(error)});
 el('exportValencia2').onclick=()=>{
  const url=URL.createObjectURL(new Blob([valenciaCsv()],{type:'text/csv;charset=utf-8'}));
  const link=document.createElement('a');link.href=url;link.download=valenciaAsset().datasetId+'_VALENCIA2_assignments.csv';link.click();

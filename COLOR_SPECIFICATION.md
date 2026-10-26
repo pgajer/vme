@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 10 · reviewed 25 October 2026.
+Specification version 11 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -34,13 +34,42 @@ two taxa dominate every assigned sample. G1, G2 and similar group numbers are
 local to the dataset and reference target, not universal biological identities.
 The active legend determines the meaning of color in a particular view.
 
-When one merged graph edge is selected outside Participant mode, the sample
-view colors its members by their **original pure pairs**. The component table in
-**Selected vertex or state** exposes counts, visibility checkboxes and color
-pickers for these pairs. Its colors share the existing pair palette and overrides;
-the graph retains merged-group colors. Hiding a component does not delete its
-row or change assignments. Explicit VALENCIA2 and rank-3 color modes retain
-precedence over these defaults.
+## Sample coloring
+
+The **Color by** selector explicitly chooses sample colors independently of the
+graph mode, selected samples and saved embedding:
+
+- **q% 2-CSTs** uses saved merged assignments at the current reference-core
+  target. The label follows the target (for example, 90% 2-CSTs). This percentage
+  is reference-core coverage, not the abundance of the named pair in each
+  sample. The option is disabled where merged assignments are unavailable.
+- **Pure 2-CSTs** uses original, unmerged leading-pair assignments. “Pure” does
+  not imply that only two taxa occur in a sample. This is available within a
+  merged group as well as in population and vertex views.
+- **Cohorts** uses recorded cohort identifiers, with deterministic colors keyed
+  by the complete identifier. Reviewed annotation metadata takes precedence over
+  older umbrella labels, joined by exact record ID (including the HMP/U01
+  split in the 40-participant panel). Missing cohort metadata is Unclassified (gray).
+  Distinct records retain separate cohort identities even at identical
+  coordinates. A single composition point representing multiple cohorts is
+  labeled Multiple cohorts (gray); its cohort is not guessed.
+- **Visit colors** is available in participant mode. Participant points use
+  visit labels/order; background points retain state colors or the existing
+  gray-background setting.
+- **Top-3 CSTs** retains the existing rank-3 palette when that display is active.
+- **VALENCIA2 CSTs / subCSTs** retain the saved annotations where available.
+
+The active choice has a tooltip and a visible explanatory note. Legend counts
+and percentages use the same displayed identities as before; reference markers
+are excluded. A color switch restyles existing sample markers without changing
+coordinates, marker visibility, reference diamonds, camera, graph selection,
+component visibility, or fitting method. Existing gray-background and non-core
+inspection overrides remain in force. Preferences remain dataset-specific.
+
+The original-pair component controls still describe membership within a selected
+merged group. Their color pickers edit the shared pair palette; select Pure
+2-CSTs to see those component colors in the sample view. Cohort and VALENCIA2
+colors do not redefine graph state colors or assignments.
 
 ## Optional graph fading by state size
 

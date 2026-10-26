@@ -266,12 +266,13 @@ function installRank3(){
  try{rank3Colors=JSON.parse((typeof datasetPanelStorage==='undefined'?localStorage:datasetPanelStorage).getItem('vme-rank3-colors-v1')||'{}')}catch{rank3Colors={}}
  if(!rank3Colors||typeof rank3Colors!=='object'||Array.isArray(rank3Colors))rank3Colors={};
  el('showRank3').onchange=()=>{
-  try{rank3Base();rememberSelection();rank3.enabled=el('showRank3').checked;rank3Clear();selected=null;selectedVertex=null;el('catalogueKind').value=rank3.enabled?'faces':'edges';rank3Refresh()}catch(e){rank3.enabled=false;el('showRank3').checked=false;el('rank3Status').textContent=e.message}
+  try{rank3Base();rememberSelection();rank3.enabled=el('showRank3').checked;if(rank3.enabled&&rank3.color==='rank3')el('sampleColorScheme').value='rank3';rank3Clear();selected=null;selectedVertex=null;el('catalogueKind').value=rank3.enabled?'faces':'edges';rank3Refresh()}catch(e){rank3.enabled=false;el('showRank3').checked=false;el('rank3Status').textContent=e.message}
  };
  for(const id of ['rank3Mode','rank3Threshold','rank3Basis','rank3SampleColor','rank3Background'])el(id).onchange=()=>{
   if(id==='rank3Mode')el('rank3Threshold').value={count:50,percent:1,coverage:70}[el('rank3Mode').value];
   const mode=el('rank3Mode').value,n=Number(el('rank3Threshold').value);if(!Number.isFinite(n)||n<0||mode!=='count'&&n>100||mode==='count'&&!Number.isInteger(n)){el('rank3Status').textContent='Enter a nonnegative count, or a percentage from 0 to 100.';return}
   rememberSelection();rank3={...rank3,mode,threshold:n,basis:el('rank3Basis').value,color:el('rank3SampleColor').value,background:el('rank3Background').checked};
+  if(id==='rank3SampleColor')el('sampleColorScheme').value=rank3.color==='rank3'?'rank3':'default';
   const keep=new Set(rank3View().rows.map(r=>r.id));rank3.selected=rank3.selected.filter(id=>keep.has(id));rank3Refresh();
  };
  el('catalogueKind').onchange=()=>{if(edgeFacesActive())edgeFaces.catalogue=el('catalogueKind').value==='edgeFaces';table()};
