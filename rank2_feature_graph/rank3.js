@@ -80,9 +80,9 @@ function selectRank3Vertex(id){rememberSelection();selected=null;selectedVertex=
 function rank3SelectionControls(){
  el('sampleEmbedding').value=DATA.referenceCoords?'reference':'global';el('scope').value=rank3HasSelection()?'selected':'core';el('scope').options[0].textContent='Selected top-3 CSTs';syncSampleSelectors();
  for(const id of ['sampleEmbedding','panelSampleEmbedding','scope'])el(id).disabled=true;
- for(const id of ['clearSelection','sampleClearSelection'])el(id).disabled=!rank3HasSelection();
- for(const id of ['backSelection','sampleBackSelection'])el(id).disabled=selectionHistory.length===0;
- for(const id of ['forwardSelection','sampleForwardSelection'])el(id).disabled=selectionFuture.length===0;
+ for(const id of ['clearSelection','sampleClearSelection','headerClearSelection'])el(id).disabled=!rank3HasSelection();
+ for(const id of ['backSelection','sampleBackSelection','headerBackSelection'])el(id).disabled=selectionHistory.length===0;
+ for(const id of ['forwardSelection','sampleForwardSelection','headerForwardSelection'])el(id).disabled=selectionFuture.length===0;
 }
 function rank3Inspect(){
  rank3SelectionControls();const v=rank3View(),rows=v.active?v.selected:v.rows,n=rows.reduce((s,r)=>s+r.frequency,0);
