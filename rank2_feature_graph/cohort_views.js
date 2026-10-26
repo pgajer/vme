@@ -143,11 +143,11 @@ function inspect(){
  if(rank3UsesSamples()){rank3Inspect();return}
  inspectBase();if(pureTableIsCandidate())renderPureEvidenceTable(true);else renderMergedComponentTable();if(!DATA.records)return;
  const indices=hasSelection()?selectionFit().indices:DATA.overviewEmbeddings[el('coverage').value].indices;
- const box=document.createElement('div');box.style.whiteSpace='normal';
- let text=sampleCounts(indices)+'. Repeated observations are not independent participants.';
+ const box=document.createElement('details');box.style.whiteSpace='normal';
+ let text='Repeated observations are not independent participants.';
  if(DATA.assignment&&!hasSelection()){const observed=new Set(current().edges.map(e=>e.id)),missing=DATA.assignment.cores.filter(id=>!observed.has(id));text+=` Observed ${observed.size} of ${DATA.assignment.cores.length} reference core groups.`;if(missing.length)text+=' Zero-record groups: '+missing.map(id=>id.split(',').map(j=>DATA.featureNames[j]).join(' + ')).join('; ')+'. Zero groups remain in the exported core-count table.'}
  if(DATA.assignment){const counts={};for(const i of indices){const method=DATA.assignment.methods[DATA.records[i].profile];counts[method]=(counts[method]||0)+1}const pure=new Set(indices.map(i=>DATA.purePairs[i]).filter(p=>p!==null));text+=` Original pure states: ${pure.size}. Assignment: core ${counts.core||0}; rank-3 support ${counts.rank3||0}; nearest neighbors ${counts.knn||0}. Core-pair labels do not imply those two taxa dominate every absorbed sample. Full assignment details are available in the CSV export.`}
- box.textContent=text;el('inspector').appendChild(box);
+ box.innerHTML='<summary>Sample membership and assignments</summary><p>'+esc(text)+'</p>';el('inspector').appendChild(box);
 }
 
 function edgeExportRows(){
