@@ -153,11 +153,18 @@ metric; **Fitting scope** separately selects the saved population or local fit.
 Population coordinates stay fixed when filtering samples.
 
 A supplement containing local fits also enables **Local selection** for both
-max-normalized methods: Rebuilt reference, All cohorts, Merged groups, 60% coverage,
+max-normalized methods: Rebuilt reference, All cohorts, Merged groups, at each
+coverage level supplied in the supplement (60%, 70%, 80%, 90%, and 100% in the
+expanded supplement),
 with a CST group or vertex selected. These are independent fits of the entire
-selected group or incident-state union. Other cohorts and coverage settings retain
+selected group or incident-state union. Other cohorts and coverage levels absent from an older supplement retain
 population views; local scope is disabled where no matching fit is installed.
 Local reference diamonds mark observed phylotype maxima within the fitted selection.
+A selection containing one distinct composition uses a single point, with pairwise
+error unavailable. Two compositions use an exact two-point layout. Larger selections
+use sparse metric MDS with SGD, two tested starts (seeds 17 and 29), and 200 epochs
+per start. The lower RMS relative-error start is retained; finishing the epoch
+budget does not certify convergence. Existing 60% local views remain compatible.
 Participant
 joint views, top-3 geometry and pure-state comparison tools retain their existing
 embeddings. The graph layout and state assignments do not change.

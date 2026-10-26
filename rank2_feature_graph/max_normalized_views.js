@@ -38,7 +38,7 @@ function syncMaxNormalizedControls(){
  if(!available&&maxNormalizedIds.includes(preferredSampleEmbedding))preferredSampleEmbedding='local';
 }
 function maxNormalizedDescription(){
- const view=maxNormalizedView();return view?view.label+(maxNormalizedIsLocal()?' · independent local 3D MDS of this selection; max-normalized targets, two tested starts, 200 SGD epochs':' · fixed full-population 3D embedding; selections restrict coordinates without refitting'):null;
+ const view=maxNormalizedView();return view?view.label+(maxNormalizedIsLocal()?(view.solver.backend==='analytic'?' · exact local layout of '+view.profiles.length+' distinct composition(s)':' · independent local 3D MDS of this selection; max-normalized targets, two tested starts, 200 SGD epochs'):' · fixed full-population 3D embedding; selections restrict coordinates without refitting'):null;
 }
 function maxNormalizedStress(ordered,rows){
  const view=maxNormalizedView();if(!view)return false;
@@ -47,7 +47,7 @@ function maxNormalizedStress(ordered,rows){
  if(ordered.some(p=>!positions.get(p.profile)?.every((v,k)=>v===p.xyz[k])))throw Error('Displayed coordinates differ from the max-normalized fit; no score is substituted.');
  const profiles=new Set(view.profiles||asset.profiles),all=ordered.length===profiles.size&&ordered.every(p=>profiles.has(p.profile));
  const result=all?view.evaluation:cachedEmbeddingStress(JSON.stringify([asset.revision,metric,ordered]),()=>evaluateEmbeddingStress(rows,ordered.map(p=>p.xyz),{metric:'maxnorm_'+metric}));
- setEmbeddingStress('sampleStress',result,'Target: '+view.label+'. Each full composition is divided by its largest abundance: qᵢₖ = pᵢₖ / maxⱼ pᵢⱼ. '+(metric==='linf'?'dᵢⱼ = maxₖ |qᵢₖ − qⱼₖ|.':'dᵢⱼ = √(Σₖ (qᵢₖ − qⱼₖ)²).')+' Population: displayed distinct profiles, each counted once; reference markers and duplicate records are excluded. '+(all?(view.evaluation.sampled?'Reproducible sampled-pair evaluation of the complete fitted selection.':'Exact all-pairs evaluation of the complete fitted population.'):'Filtering changes the evaluation population, without refitting.')+' Sparse metric MDS, SGD; '+view.solver.pivots+' pivots, seed '+view.solver.seed+', '+view.solver.starts+' start, '+view.solver.epochs+' epochs. Completing the epoch budget is not a convergence certificate.');
+ setEmbeddingStress('sampleStress',result,'Target: '+view.label+'. Each full composition is divided by its largest abundance: qᵢₖ = pᵢₖ / maxⱼ pᵢⱼ. '+(metric==='linf'?'dᵢⱼ = maxₖ |qᵢₖ − qⱼₖ|.':'dᵢⱼ = √(Σₖ (qᵢₖ − qⱼₖ)²).')+' Population: displayed distinct profiles, each counted once; reference markers and duplicate records are excluded. '+(all?(view.evaluation.sampled?'Reproducible sampled-pair evaluation of the complete fitted selection.':'Exact all-pairs evaluation of the complete fitted population.'):'Filtering changes the evaluation population, without refitting.')+(view.solver.backend==='analytic'?(view.profiles.length===1?' Single composition: no pairwise distances, so RMS relative error is undefined.':' Exact two-point layout at the target distance; no optimization needed.'):' Sparse metric MDS, SGD; '+view.solver.pivots+' pivots, seed '+view.solver.seed+', '+view.solver.starts+' start, '+view.solver.epochs+' epochs. Completing the epoch budget is not a convergence certificate.'));
  return true;
 }
 
@@ -56,15 +56,20 @@ function validateMaxNormalizedNamedView(view){
  const asset=BUNDLE_PACK.maxNormalizedEmbeddings,r=s.rank3;
  if(view.dataset!=='comb-V3V4-tx'||view.populationComparison!=='rebuilt'||!asset?.views[maxNormalizedMethod(s.embedding)]||view.datasetRevision!==asset.baseRevision||![asset.revision,asset.populationRevision].includes(view.maxNormalizedRevision)||s.participant?.active||r?.enabled&&(r.selected.length>0||r.vertex!==null||s.selected===null&&s.selectedVertex===null)||view.pureCoverage)
   throw Error('The saved max-normalized view requires its matching rebuilt-reference supplement and ordinary sample view.');
- if(s.embedding.endsWith('-local')&&(!asset.localEmbeddings||view.maxNormalizedLocalRevision!==asset.localEmbeddings.revision||view.cohort!=='all'||view.stateMode!==asset.localEmbeddings.stateMode||view.coverage!==asset.localEmbeddings.coverage||!asset.localEmbeddings.contexts[s.selectedVertex!==null?'vertex:'+s.selectedVertex:'group:'+s.selected]))throw Error('The saved local embedding requires its matching selection and local supplement.');
+ const level=maxNormalizedLocalLevel(view.coverage,asset);
+ if(s.embedding.endsWith('-local')&&(!level||view.maxNormalizedLocalRevision!==level.revision||view.coverage!==level.coverage||view.cohort!==level.cohort||view.stateMode!==level.stateMode||!level.contexts[s.selectedVertex!==null?'vertex:'+s.selectedVertex:'group:'+s.selected]))throw Error('The saved local embedding requires its matching selection and local supplement.');
 }
 
 
+function maxNormalizedLocalLevel(coverage=el('coverage').value,asset=maxNormalizedAsset()){
+ const local=asset?.localEmbeddings;
+ return local?.version===2?local.levels[coverage]:local?.coverage===coverage?local:null;
+}
 function maxNormalizedLocalEntry(method=maxNormalizedMethod()){
- const asset=maxNormalizedAsset(),local=asset?.localEmbeddings;
- if(!local||activeCohort!==local.cohort||activeStateMode!==local.stateMode||el('coverage').value!==local.coverage)return null;
+ const asset=maxNormalizedAsset(),local=maxNormalizedLocalLevel();
+ if(!local||activeCohort!==local.cohort||activeStateMode!==local.stateMode)return null;
  const key=selectedVertex!==null?'vertex:'+selectedVertex:selected!==null?'group:'+selected:null;
- const identity=key&&local.contexts[key];return identity?local.fits[identity+':'+method.replace('maxnorm-','')]:null;
+ const identity=key&&local.contexts[key];return identity?asset.localEmbeddings.fits[identity+':'+method.replace('maxnorm-','')]:null;
 }
 function maxNormalizedLocalView(){
  const fit=maxNormalizedLocalEntry();if(!fit)throw Error('No max-normalized local fit for this selection');
@@ -119,8 +124,8 @@ function syncEmbeddingChoices(){
   }
   scope.value=state.scope;scope.disabled=state.locked||(!localAvailable&&!(state.cohort&&state.method==='l1-euclidean'));
   scope.title=state.locked?'Fitting scope is fixed for this view.':localAvailable?'Population keeps saved full-population coordinates. Local selection uses an independent fit for the complete selected state or vertex union.':
-   !hasSelection()?'Population is the only fitting scope in this overview. Select an edge or vertex to use a saved local fit. Max-normalized local fits require All cohorts, Merged groups and 60% coverage.':
-   'Local selection requires a matching saved fit. Max-normalized local fits: Rebuilt reference, All cohorts, Merged groups, 60% coverage.';
+   !hasSelection()?'Population is the only fitting scope in this overview. Select an edge or vertex to use a saved local fit. Max-normalized local fits require All cohorts, Merged groups and a supplied coverage level.':
+   'Local selection requires a matching saved fit. Max-normalized local fits: Rebuilt reference, All cohorts, Merged groups, and a supplied coverage level.';
   if(scope.parentElement)scope.parentElement.title=scope.title;
  }
 }

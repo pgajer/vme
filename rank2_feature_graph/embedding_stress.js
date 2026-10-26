@@ -80,7 +80,7 @@ function installEmbeddingStress(){
  document.body.appendChild(dialog);el('embeddingStressClose').onclick=()=>dialog.close();
  document.addEventListener('click',event=>{const button=event.target.closest?.('.embeddingStress');if(!button)return;const {result,scope}=embeddingStressDetails.get(button.id)||{};
   el('embeddingStressValue').textContent=button.textContent;el('embeddingStressScope').textContent=scope||'Diagnostic not yet available.';
-  el('embeddingStressEvaluation').textContent=result?`${result.profiles?.toLocaleString()??'—'} profiles; ${result.pairs.toLocaleString()} positive-distance pairs. ${result.sampled?'Sampled estimate; seed '+result.seed+'.':'All profile pairs evaluated.'}${result.zeroPairs?' '+result.zeroPairs+' zero-distance pairs excluded.':''}${result.displayScale&&result.displayScale!==1?' Saved display distances divided by '+result.displayScale.toPrecision(7)+'.':''}`:'';
+  el('embeddingStressEvaluation').textContent=result?`${result.profiles?.toLocaleString()??'—'} profiles; ${result.pairs.toLocaleString()} positive-distance pairs. ${result.sampled?'Sampled estimate'+(Number.isInteger(result.seed)?'; seed '+result.seed:'')+'.':'All profile pairs evaluated.'}${result.zeroPairs?' '+result.zeroPairs+' zero-distance pairs excluded.':''}${result.displayScale&&result.displayScale!==1?' Saved display distances divided by '+result.displayScale.toPrecision(7)+'.':''}`:'';
   dialog.showModal();
  });
 }

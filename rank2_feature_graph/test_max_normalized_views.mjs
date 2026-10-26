@@ -82,3 +82,28 @@ run("validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'previou
 assert.throws(()=>run("validateMaxNormalizedNamedView({...savedView,maxNormalizedLocalRevision:'wrong',selection:{...savedView.selection,embedding:'maxnorm-linf-local'}})"),/local embedding/);
 assert.ok(changes>=3);
 console.log('Method/scope controls passed: mirrored controls, local membership, unavailable combinations, cohort scopes and old saved-view compatibility.');
+// A coverage extension preserves the old bank identity and gates each selection.
+run(`const legacy=BUNDLE_PACK.maxNormalizedEmbeddings.localEmbeddings;
+ BUNDLE_PACK.maxNormalizedEmbeddings.localEmbeddings={version:2,revision:'expanded',cohort:'all',stateMode:'merged',fits:legacy.fits,
+ levels:Object.fromEntries(['60','70','80','90','100'].map(q=>[q,{...legacy,coverage:q,revision:q==='60'?'locals':'level-'+q}]))};
+ selected='3,7';selectedVertex=null;`);
+for(const coverage of ['60','70','80','90','100']){
+ el('coverage').value=coverage;
+ run("changeEmbeddingChoice('maxnorm-linf','local');syncEmbeddingChoices()");
+ assert.equal(el('sampleEmbedding').value,'maxnorm-linf-local');
+ assert.equal(el('sampleFitScope').disabled,false);
+ assert.equal(run('maxNormalizedLocalLevel().revision'),coverage==='60'?'locals':'level-'+coverage);
+ run(`validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'previous',maxNormalizedLocalRevision:'${coverage==='60'?'locals':'level-'+coverage}',cohort:'all',stateMode:'merged',coverage:'${coverage}',selection:{...savedView.selection,embedding:'maxnorm-linf-local',selected:'3,7'}})`);
+}
+run("selected='missing';syncMaxNormalizedControls();syncEmbeddingChoices()");
+assert.equal(el('sampleEmbedding').value,'maxnorm-linf');assert.equal(el('sampleFitScope').disabled,true);
+run(`selected='3,7';el('sampleEmbedding').value='maxnorm-linf-local';
+ const tiny=BUNDLE_PACK.maxNormalizedEmbeddings.localEmbeddings.fits['members:linf'];
+ tiny.profiles=[3];tiny.coordinates=[[0,0,0]];tiny.solver={backend:'analytic',method:'singleton',starts:0,epochs:0};
+ tiny.evaluation={relativeRms:null,pairs:0,profiles:1,sampled:false};
+ maxNormalizedStress([{profile:3,xyz:[0,0,0]}],[[[0,1]]]);`);
+assert.equal(el('sampleStress').textContent,'RMS relative error: unavailable');
+assert.ok(run("embeddingStressDetails.get('sampleStress').scope.includes('no pairwise distances')"));
+console.log('Coverage extension passed: all five levels, legacy bookmarks, missing selection and singleton error display.');
+
+assert.throws(()=>run("validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'previous',maxNormalizedLocalRevision:'level-100',cohort:'all',stateMode:'merged',selection:{...savedView.selection,embedding:'maxnorm-linf-local',selected:'3,7'}})"),/local embedding/,'A missing saved coverage must not fall back to the current control value');
