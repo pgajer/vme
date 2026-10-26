@@ -206,16 +206,7 @@ def prepare(package, metadata_path, output, announce=True):
     scripts = list(re.finditer(r'<script>(.*?)</script>', page, re.S))
     application = scripts[-1][1]
     application = application[application.index('const VMRC_TAXON_PALETTE='):]
-    # The supporting V4 bundle remains available to neighborhoods only.
-    old = 'const options=[...catalogue.values()].map'
-    if application.count(old) != 1:
-        raise ValueError('Review portable dataset selector integration')
-    application = application.replace(old, 'const options=[...catalogue.values()].filter(b=>!BUNDLE_PACK.distributionDatasets||BUNDLE_PACK.distributionDatasets.includes(b.dataset.id)).map')
     loader = (HERE / 'asset_loader.js').read_text()
-    old = 'Object.values(manifest.datasets).map'
-    if loader.count(old) != 1:
-        raise ValueError('Review portable loader integration')
-    loader = loader.replace(old, 'Object.values(manifest.datasets).filter(x=>!manifest.seed.distributionDatasets||manifest.seed.distributionDatasets.includes(x.dataset.id)).map')
     output.mkdir(parents=True)
     outweb = output / 'web'
     for url, desc in assets.items():
@@ -267,6 +258,70 @@ def prepare(package, metadata_path, output, announce=True):
         print('Ready: ' + str(output / 'Start VME.command'))
 
 
+def attach_neighborhoods(page_path, optional_web):
+    """Expose historical neighborhoods in an isolated loader, never merge populations."""
+    page_path, optional_web = Path(page_path), Path(optional_web)
+    page = page_path.read_text()
+    if 'id="vme-optional-neighborhoods"' in page:
+        raise ValueError('Optional neighborhoods already installed in this page')
+    main = read_manifest(page_path)
+    saved_optional = re.search(r'<script id="vme-optional-neighborhoods" type="application/json">(.*?)</script>', (optional_web / 'index.html').read_text(), re.S)
+    extra = copy.deepcopy(json.loads(saved_optional[1]) if saved_optional else read_manifest(optional_web / 'index.html'))
+    if [f['id'] for f in extra.get('families', [])] != ['li-lc-neighborhoods']:
+        raise ValueError('Expected the preserved Li/Lc neighborhood family')
+    dependencies = extra['neighborhoods']['datasets']
+    extra['datasets'] = {k: extra['datasets'][k] for k in dependencies}
+    extra.pop('sensitivity', None)
+    extra['seed'].pop('sensitivityComparisonsAvailable', None)
+    extra['seed']['distributionDatasets'] = []
+    extra['seed']['default'] = dependencies[0]
+    extra['seed']['optionalDatasetLinks'] = [
+        dict(id=k, title=main['seed'].get('datasetPresentation', {}).get(k, {}).get('title', v['dataset']['title']))
+        for k, v in main['datasets'].items()
+        if k in main['seed'].get('distributionDatasets', main['datasets'])]
+    main['seed']['optionalDatasetLinks'] = [dict(id=f['id'], title=f['title']) for f in extra['families']]
+    # Same interface code in both contexts; only the data manifest changes.
+    for key in ('application', 'validator', 'plotly'):
+        extra[key] = main[key]
+    retained = {k:v for k,v in extra.items() if k not in ('application','validator','plotly')}
+    assets = {d['url']:d for d in descriptors(retained)}
+    for desc in assets.values():
+        checked_bytes(optional_web, desc)
+    for desc in assets.values():
+        source, target = asset_path(optional_web, desc), asset_path(page_path.parent, desc)
+        if target.exists():
+            checked_bytes(page_path.parent, desc)
+        else:
+            copy_file(source, target)
+    encoded_main = encoded(main).decode().replace('</', '<\\/')
+    encoded_extra = encoded(extra).decode().replace('</', '<\\/')
+    page = re.sub(PATTERN, lambda _: '<script id="vme-http-manifest" type="application/json">' + encoded_main + '</script>' +
+                  '<script id="vme-optional-neighborhoods" type="application/json">' + encoded_extra + '</script>', page, count=1, flags=re.S)
+    temporary = page_path.with_suffix(page_path.suffix + '.optional-tmp')
+    temporary.write_text(page)
+    temporary.replace(page_path)
+    return sha(encoded(extra))
+
+
+def install_neighborhoods(output, package, metadata):
+    # Keep the historical package immutable and independently validated.
+    with tempfile.TemporaryDirectory(prefix='vme-neighborhoods-', dir=output.parent) as temp:
+        companion = Path(temp) / 'app'
+        prepare(package, metadata, companion, announce=False)
+        validate_prepared(companion)
+        digest = attach_neighborhoods(output / 'web/index.html', companion / 'web')
+    receipt_path = output / 'SOURCE_AND_DATA.json'
+    receipt = json.loads(receipt_path.read_text())
+    receipt['optionalNeighborhoods'] = dict(dataPackage=str(package), metadataFile=str(metadata), manifestSha256=digest)
+    receipt_path.write_text(json.dumps(receipt, indent=2) + '\n')
+    identity_path=output/'web/vme-instance.txt'
+    previous=identity_path.read_text().strip()
+    identity=sha(encoded(dict(base=previous,neighborhoods=digest)))
+    launcher=output/'Start VME.command'
+    launcher.write_text(launcher.read_text().replace(previous,identity))
+    identity_path.write_text(identity)
+
+
 @contextmanager
 def update_lock(output):
     """Serialize updates without leaving a stale lock after a process exits."""
@@ -302,7 +357,9 @@ def validate_prepared(output):
     """Re-read the finished candidate, including newly generated script bytes."""
     web = output / 'web'
     manifest = read_manifest(web / 'index.html')
-    for desc in descriptors(manifest):
+    optional = re.search(r'<script id="vme-optional-neighborhoods" type="application/json">(.*?)</script>', (web / 'index.html').read_text(), re.S)
+    manifests = [manifest] + ([json.loads(optional[1])] if optional else [])
+    for desc in descriptors(manifests):
         checked_bytes(web, desc)
     html = (web / 'index.html').read_text()
     loaders = re.findall(r'<script src="(/vme-assets/([a-f0-9]{64})\.js)"></script>', html)
@@ -312,6 +369,8 @@ def validate_prepared(output):
         raw = (web / url.lstrip('/')).read_bytes()
         checked_bytes(web, dict(url=url, sha256=digest, bytes=len(raw)))
     receipt = json.loads((output / 'SOURCE_AND_DATA.json').read_text())
+    if optional and receipt.get('optionalNeighborhoods', {}).get('manifestSha256') != sha(encoded(manifests[1])):
+        raise ValueError('Optional neighborhood manifest differs from its receipt')
     if receipt['application'] != manifest['application']:
         raise ValueError('Prepared application receipt differs')
     if not re.fullmatch('[a-f0-9]{64}', (web / 'vme-instance.txt').read_text()):
@@ -341,7 +400,7 @@ def recover_update(output, journal):
     journal.unlink()
 
 
-def update(package=None, metadata_path=None, output=None):
+def update(package=None, metadata_path=None, output=None, neighborhood_package=None, neighborhood_metadata=None):
     output = Path(output or Path.home() / 'vme').expanduser().absolute()
     if output.is_symlink():
         raise ValueError('The app folder must not be a symbolic link')
@@ -367,10 +426,22 @@ def update(package=None, metadata_path=None, output=None):
         if (output == package or output in package.parents or package in output.parents
                 or output == metadata_path or output in metadata_path.parents):
             raise ValueError('Keep the original data package and metadata outside the app folder')
+        saved_optional = old_receipt.get('optionalNeighborhoods', {})
+        neighborhood_package = neighborhood_package or saved_optional.get('dataPackage')
+        neighborhood_metadata = neighborhood_metadata or saved_optional.get('metadataFile')
+        if bool(neighborhood_package) != bool(neighborhood_metadata):
+            raise ValueError('Supply both the neighborhood package and its metadata')
+        if neighborhood_package:
+            neighborhood_package = Path(neighborhood_package).expanduser().resolve()
+            neighborhood_metadata = Path(neighborhood_metadata).expanduser().resolve()
+            if any(p == output or output in p.parents or p in output.parents for p in (neighborhood_package, neighborhood_metadata)):
+                raise ValueError('Keep optional neighborhood inputs outside the app folder')
         transaction = Path(tempfile.mkdtemp(prefix=output.name + '-update-', dir=output.parent))
         candidate, previous = transaction / 'candidate', transaction / 'previous'
         try:
             prepare(package, metadata_path, candidate, announce=False)
+            if neighborhood_package:
+                install_neighborhoods(candidate, neighborhood_package, neighborhood_metadata)
             validate_prepared(candidate)
             # Write recovery information before either directory is moved.
             with journal.open('x') as stream:
@@ -406,10 +477,12 @@ def main():
     item.add_argument('--package', type=Path, help='Original data package (remembered after setup)')
     item.add_argument('--metadata', type=Path, help='Metadata supplement (remembered after setup)')
     item.add_argument('--output', type=Path, default=Path.home() / 'vme')
+    item.add_argument('--neighborhood-package', type=Path, help='Optional historical Li/Lc data package (remembered locally)')
+    item.add_argument('--neighborhood-metadata', type=Path, help='Matching neighborhood metadata (remembered locally)')
     args = parser.parse_args()
     try:
         if args.command == 'update':
-            update(args.package, args.metadata, args.output)
+            update(args.package, args.metadata, args.output, args.neighborhood_package, args.neighborhood_metadata)
         elif args.command == 'prepare':
             prepare(args.package.resolve(), args.metadata.resolve(), args.output.resolve())
         else:

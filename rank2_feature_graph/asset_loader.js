@@ -60,7 +60,9 @@ function createLoader(manifest,request=fetch,digest=bytes=>crypto.subtle.digest(
 }
 root.VMEAssetLoader={createLoader,mergePack};
 if(typeof document==='undefined')return;
-const manifest=JSON.parse(document.getElementById('vme-http-manifest').textContent),loader=createLoader(manifest);
+const requested=new URLSearchParams(location.search).get('dataset');
+const optionalNode=document.getElementById('vme-optional-neighborhoods'),optional=optionalNode?JSON.parse(optionalNode.textContent):null;
+const manifest=optional?.families.some(f=>f.id===requested)?optional:JSON.parse(document.getElementById('vme-http-manifest').textContent),loader=createLoader(manifest);
 root.VME_ASSETS=loader;
 const status=document.getElementById('vmeLoadStatus'),retry=document.getElementById('vmeLoadRetry');
 loader.status=message=>{status.textContent=message;status.hidden=!message};
@@ -68,9 +70,8 @@ loader.retry=action=>{retry.hidden=!action;retry.onclick=action?()=>Promise.reso
 const controls=[...document.querySelectorAll('input,select,button')].filter(e=>e!==retry),disabled=controls.map(e=>e.disabled);
 controls.forEach(e=>e.disabled=true);
 const selector=document.getElementById('datasetSelect');
-const choices=[...Object.values(manifest.datasets).map(x=>({id:x.dataset.id,title:manifest.seed.datasetPresentation?.[x.dataset.id]?.title||x.dataset.title})),...manifest.families];
+const choices=[...Object.values(manifest.datasets).filter(x=>!manifest.seed.distributionDatasets||manifest.seed.distributionDatasets.includes(x.dataset.id)).map(x=>({id:x.dataset.id,title:manifest.seed.datasetPresentation?.[x.dataset.id]?.title||x.dataset.title})),...manifest.families,...(manifest.seed.optionalDatasetLinks||[])];
 for(const item of choices){const option=document.createElement('option');option.value=item.id;option.textContent=item.title;selector.appendChild(option)}
-const requested=new URLSearchParams(location.search).get('dataset');
 let validationLibrary=null;
 let selected=choices.some(x=>x.id===requested)?requested:manifest.seed.default,revision=0,library=null;
 selector.value=selected;selector.disabled=false;
@@ -93,6 +94,7 @@ loader.validateDataset=(value,id)=>{
  }
 };
 async function start(id){
+ if(manifest.seed.optionalDatasetLinks?.some(item=>item.id===id)){const url=new URL(location.href);url.searchParams.set('dataset',id);location.assign(url.href);return}
  const attempt=++revision;selected=id;loader.retry(null);loader.status('Loading '+choices.find(x=>x.id===id).title+'…');
  const dataset=manifest.datasets[id]?id:manifest.neighborhoods.datasets[0];
  try{

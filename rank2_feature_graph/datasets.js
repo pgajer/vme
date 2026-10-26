@@ -22,8 +22,8 @@ function datasetDisplayMethods(meta){return cstTerminology([BUNDLE_PACK.datasetP
 function updateDatasetChoices(){
  const catalogue=new Map(typeof VME_ASSETS==='undefined'?[]:Object.entries(VME_ASSETS.manifest.datasets).map(([id,x])=>[id,x]));
  for(const [id,b] of datasetRegistry)catalogue.set(id,b);
- const options=[...catalogue.values()].map(b=>`<option value="${esc(b.dataset.id)}">${esc(datasetDisplayTitle(b.dataset))}</option>`).join('')+
-  [...embeddingFamilyRegistry.values()].map(f=>`<option value="${esc(f.id)}">${esc(f.title)}</option>`).join('')+'<option value="">Load dataset bundle…</option>';
+ const options=[...catalogue.values()].filter(b=>!BUNDLE_PACK.distributionDatasets||BUNDLE_PACK.distributionDatasets.includes(b.dataset.id)).map(b=>`<option value="${esc(b.dataset.id)}">${esc(datasetDisplayTitle(b.dataset))}</option>`).join('')+
+  [...embeddingFamilyRegistry.values()].map(f=>`<option value="${esc(f.id)}">${esc(f.title)}</option>`).join('')+(BUNDLE_PACK.optionalDatasetLinks||[]).map(f=>`<option value="${esc(f.id)}">${esc(f.title)}</option>`).join('')+'<option value="">Load dataset bundle…</option>';
  for(const id of ['datasetSelect','panelDatasetSelect']){el(id).innerHTML=options;el(id).value=activeEmbeddingFamily?.id||META.id}
 }
 function datasetPresentation(coverage=META.defaultCoverage){
@@ -163,6 +163,7 @@ async function loadForSelection(task,revision,retry){
 function datasetMessage(message){for(const id of ['datasetMessage','panelDatasetMessage'])el(id).textContent=message}
 for(const id of ['datasetSelect','panelDatasetSelect'])el(id).onchange=()=>{
  const value=el(id).value;
+ if(BUNDLE_PACK.optionalDatasetLinks?.some(item=>item.id===value)){const url=new URL(location.href);url.searchParams.set('dataset',value);location.assign(url.href);return}
  if(value===''){
   // Restore both selectors before opening the picker, including when it is canceled.
   updateDatasetChoices();el('datasetFile').value='';el('datasetFile').click();return;
