@@ -218,7 +218,7 @@ var selectionPanelLayoutSync=null;
  }
  selectionPanelLayoutSync=show=>{
   workspace.classList.toggle('subjectTrajectoryVisible',show);
-  document.getElementById('selectionDetails').hidden=show;document.getElementById('stateEdgeSelector').hidden=show;
+  document.getElementById('inspector').hidden=show;document.getElementById('stateEdgeSelector').hidden=show;
   if(!show&&maximized?.id==='selectionPanel')maximizePanel(maximized);
  };
  selectionPanelLayoutSync(participant.active);
