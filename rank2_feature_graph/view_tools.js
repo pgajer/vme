@@ -48,9 +48,9 @@ function degreeFilteredGeometry(geometry){
 }
 function syncGraphDegreeControls(){
  const settings=graphDegreeSettings();el('graphMinimumDegree').disabled=!settings.enabled;
- const g=degreeFilteredGraph(current());
+ const whole=current(),g=degreeFilteredGraph(whole);
  el('graphDegreeNote').hidden=!settings.enabled;
- el('graphDegreeNote').textContent=`Degree ≥ ${settings.minimum} in the whole graph: ${g.nodes.length} vertices and ${g.edges.length} edges qualify.`+(g.nodes.length?'':' Lower the minimum to show vertices.');
+ el('graphDegreeNote').textContent=`Degree ≥ ${settings.minimum} · displaying ${fmt(g.nodes.length)} of ${fmt(whole.nodes.length)} vertices and ${fmt(g.edges.length)} of ${fmt(whole.edges.length)} edges.`+(g.nodes.length?'':' Lower the minimum to show vertices.');
 }
 // Count observation identities, not edge frequencies: shared memberships count once.
 function graphVertexStatistics(g,entries,population){
@@ -64,12 +64,23 @@ function graphVertexStatistics(g,entries,population){
  return g.nodes.map(n=>({...n,degree:degrees.get(n.id),count:members.get(n.id).size,percent:population.N?100*members.get(n.id).size/population.N:null}))
   .sort((a,b)=>b.degree-a.degree||b.count-a.count||String(a.label).localeCompare(String(b.label)));
 }
+// Count connected components after degree filtering, including isolated vertices.
+function graphComponentCount(g){
+ const neighbors=new Map(g.nodes.map(n=>[n.id,[]]));
+ for(const e of g.edges){if(!neighbors.has(e.from)||!neighbors.has(e.to))continue;neighbors.get(e.from).push(e.to);neighbors.get(e.to).push(e.from)}
+ const unseen=new Set(neighbors.keys());let count=0;
+ while(unseen.size){count++;const todo=[unseen.values().next().value];unseen.delete(todo[0]);while(todo.length)for(const id of neighbors.get(todo.pop()))if(unseen.delete(id))todo.push(id)}
+ return count;
+}
+function renderGraphSummary(g,singleGroups){
+ const displayed=degreeFilteredGraph(g),merged=!!DATA.assignment;
+ el('status').innerHTML=`<ul><li>Vertices: ${fmt(displayed.nodes.length)} phylotypes</li><li>Edges: ${fmt(displayed.edges.length)} ${merged?'merged groups':'top-2 CSTs'}</li><li>Connected components: ${fmt(graphComponentCount(displayed))}</li>${singleGroups?`<li>${fmt(singleGroups)} single-taxon ${singleGroups===1?'group has':'groups have'} no graph edges.</li>`:''}</ul>`;
+}
 let graphInformationCache=null;
 function syncGraphInformation(){
  const g=current(),bundle=datasetRegistry.get(META.id),records=!!DATA.records||bundle.cohortAnalysis?.populationVersion===2&&bundle.dataset.observationUnit!=='distinct-composition';
  const population=legendPopulation(bundle,records);
- el('status').textContent=`${g.nodes.length} feature vertices · ${g.edges.length} top-2 CST edges · ${fmt(g.coverage)}% of selected population retained · ${g.components} connected component(s).`;
- if(graphInformationCache?.data===DATA&&graphInformationCache.graph===g&&graphInformationCache.population===population)return;
+ if(graphInformationCache?.data===DATA&&graphInformationCache.graph===g&&graphInformationCache.population===population){renderGraphSummary(g,graphInformationCache.singleGroups);return}
  const entries=[];
  for(const i of eligibleIndices()){
   const pair=DATA.samples.pair[i];
@@ -79,9 +90,11 @@ function syncGraphInformation(){
   }else entries.push({key:population.profileKey(i),pair});
  }
  const rows=graphVertexStatistics(g,entries,population);
- el('graphVertexNote').textContent=`Whole current graph; selections do not change this table. n: unique ${population.unit} in incident edges. % of the full eligible dataset: N = ${fmt(population.N)} ${population.unit}. A sample can belong to more than one vertex union.`;
+ el('graphVertexNote').textContent=`Whole current graph before degree filtering; vertex and edge selections do not change this table. n: unique ${population.unit} in incident edges. % of the full eligible dataset: N = ${fmt(population.N)} ${population.unit}. A sample can belong to more than one vertex union.`;
  el('graphVertexRows').innerHTML=rows.map(n=>`<tr><td>${esc(n.id)} · ${esc(n.label)}</td><td>${n.degree}</td><td>${fmt(n.count)}</td><td>${n.percent===null?'—':n.percent>0&&n.percent<.01?'&lt;0.01':n.percent.toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="4">No vertices in the current graph.</td></tr>';
- graphInformationCache={data:DATA,graph:g,population};
+ const singleGroups=DATA.assignment?new Set(entries.filter(e=>DATA.rank1Groups?.[e.pair]).map(e=>e.pair)).size:0;
+ graphInformationCache={data:DATA,graph:g,population,singleGroups};
+ renderGraphSummary(g,singleGroups);
 }
 function resetAllDatasetGraphFading(){
  const result=datasetPanelStorage.resetGraphFading();
