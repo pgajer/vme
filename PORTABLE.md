@@ -149,16 +149,17 @@ python3 scripts/portable.py update --metadata /path/to/VME-metadata-maxnorm.json
 
 Later `python3 scripts/portable.py update` calls remember that file. The original
 views remain available. **Sample embedding** selects the normalization and distance
-metric; **Fitting scope** separately selects the saved population or local fit.
-Population coordinates stay fixed when filtering samples.
+metric. Selecting a CST or vertex automatically uses its saved local fit when
+available; the title distinguishes a local fit from restricted population
+coordinates. Clearing the selection returns to the population embedding.
 
-A supplement containing local fits also enables **Local selection** for both
+A supplement containing local fits also enables local selection geometry for both
 max-normalized methods: Rebuilt reference, All cohorts, Merged groups, at each
 coverage level supplied in the supplement (60%, 70%, 80%, 90%, and 100% in the
 expanded supplement),
 with a CST group or vertex selected. These are independent fits of the entire
 selected group or incident-state union. Other cohorts and coverage levels absent from an older supplement retain
-population views; local scope is disabled where no matching fit is installed.
+population views, labelled as restricted population coordinates.
 Local reference diamonds mark observed phylotype maxima within the fitted selection.
 A selection containing one distinct composition uses a single point, with pairwise
 error unavailable. Two compositions use an exact two-point layout. Larger selections
@@ -191,3 +192,32 @@ The exporter checks record/profile identities, coordinate values, exact-evaluati
 checksums and solver provenance. Setup additionally binds the supplement to the
 base dataset, rebuilt population and composition matrix. Outputs remain private
 data supplements under their own access and reuse terms, excluded from MIT.
+
+## Independent pure-state vertex views
+
+The expanded rebuilt-reference metadata supplement adds independent local
+**sum-normalized Euclidean** fits for pure-state vertex selections in comb-V3V4-tx,
+for every cohort and reference coverage level (60%, 70%, 80%, 90%, 100%).
+These replace the former population-coordinate restrictions. Existing local fits
+are reused only for identical composition membership in the same frozen data;
+other selections have newly fitted coordinates. Duplicate compositions share a
+point, while the sample count still includes their separate source records.
+Reference diamonds use observed maxima within that local fit.
+
+After obtaining the matching supplement separately, stop VME and run:
+
+```sh
+cd "$HOME/vme-source"
+git pull --ff-only && python3 scripts/portable.py update \
+  --metadata /path/to/VME-metadata-pure-local-2026-10-26.json
+```
+
+Use the actual supplied path. The updater checks that the supplement belongs to
+your data package; the October 26 rebuilt-reference-only supplement cannot be
+installed over the older October 23 package. Later updates remember the new
+metadata path. Reopen `~/vme/Start VME.command` and reload the browser tab.
+
+Local geometries are selected from saved coordinates; no fitting runs in the
+browser. Population overviews and explicit common-reference comparisons keep
+their shared coordinates. Older packages without this supplement remain usable
+and label the fallback as a restricted population embedding.

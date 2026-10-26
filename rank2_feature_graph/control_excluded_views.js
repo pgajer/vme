@@ -6,6 +6,22 @@ function canonicalDisplayCohort(bundle,cohort){
  return cohort==='records'&&recordExtension(bundle)?.eligibility?'all':cohort;
 }
 const eligiblePureCache=new WeakMap();
+const pureVertexDecoded=new Map();
+function pureVertexLocalEntry(pop,q,vertex){
+ const asset=BUNDLE_PACK.pureVertexLocal;
+ if(!asset||asset.populationRevision!==BUNDLE_PACK.combDisplay?.revision)return null;
+ const key=asset.contexts[JSON.stringify([pop==='all'?'records':pop,String(q),Number(vertex)])];
+ return key?asset.fits[key]:null;
+}
+function pureVertexLocalFit(pop,q,vertex){
+ const entry=pureVertexLocalEntry(pop,q,vertex);if(!entry)return null;
+ if(entry.existingFit)return combDisplayFit(entry.existingFit);
+ if(!pureVertexDecoded.has(entry)){
+  if(pureVertexDecoded.size>=16)pureVertexDecoded.delete(pureVertexDecoded.keys().next().value);
+  pureVertexDecoded.set(entry,{...entry,coords:decodeSavedCoordinates(entry)});
+ }
+ return pureVertexDecoded.get(entry);
+}
 function materializeEligiblePureView(bundle,cohort){
  const a=recordExtension(bundle),b=bundle.data,x=BUNDLE_PACK.combDisplay,pop=cohort==='all'?'records':cohort;
  let cache=eligiblePureCache.get(bundle);if(!cache){cache=new Map();eligiblePureCache.set(bundle,cache)}if(cache.has(pop))return cache.get(pop);
@@ -21,7 +37,7 @@ function materializeEligiblePureView(bundle,cohort){
   const byProfile=original&&new Map(original.profiles.map((p,k)=>[p,original.coords[k]]));
   if(original&&JSON.stringify(original.profiles)!==JSON.stringify([...new Set(indices.map(i=>records[i].profile))].sort((a,b)=>a-b)))throw Error('Pure-state fit membership differs from eligible records');
   return {...(original||{}),fittingScope:original?'local':'population-restriction',indices,n:indices.length,coords:indices.map(i=>byProfile?byProfile.get(records[i].profile):coords[i]),'relative.error':original?.evaluation?.relativeRms??null,
-   source:original?'Verified exact-membership pure-state fit from the corrected 100% catalogue; original solver provenance retained.':'Corrected population coordinates restricted to selected pure states; not a new subset fit.',
+   source:original?'Independent exact-membership local fit of complete sum-normalized compositions; original solver provenance retained.':'Corrected population coordinates restricted to selected pure states; not a new subset fit.',
    pca:original?.pca||original?.provenance?.pca||{'90':null,'95':null,'99':null}};
  }
  function anchors(f,features){
@@ -51,7 +67,8 @@ function materializeEligiblePureView(bundle,cohort){
   graphs[q]={nodes,edges,coverage:100*included.length/population.length,components};coords3d[q]=nodes.map(n=>positions.get(n.id));
   overviewEmbeddings[q]=f;overviewEndpointProjections[q]=references;
   for(const j of features){const incident=new Set(edges.filter(e=>e.from===j||e.to===j).map(e=>e.id)),ii=included.filter(i=>incident.has(pairs[i])),key=q+'_'+j;
-   vertexFits[key]=restricted(ii);vertexMap[key]=key;vertexReferences[key]=anchors(vertexFits[key],[...new Set(edges.filter(e=>incident.has(e.id)).flatMap(e=>[e.from,e.to]))]);}
+   lazy(vertexFits,key,()=>restricted(ii,pureVertexLocalFit(pop,q,j)));vertexMap[key]=key;
+   lazy(vertexReferences,key,()=>anchors(vertexFits[key],[...new Set(edges.filter(e=>incident.has(e.id)).flatMap(e=>[e.from,e.to]))]));}
  }
  const data={...b,records,eligibleIndices:population,purePairs:pairs,samples:{ids:records.map(r=>r.id),pair:pairs,coords},referenceCoords,
   sampleTopFeatures:records.map(r=>b.sampleTopFeatures[r.profile]),graphs,coords3d,overviewEmbeddings,overviewEndpointProjections,
@@ -60,7 +77,7 @@ function materializeEligiblePureView(bundle,cohort){
   description:title+' · control-excluded pure states',overviewLabel:title+' · restricted population coordinates',globalLabel:'Corrected population / restricted',
   overviewDescription:'Pure-state coverage is recomputed from eligible distinct profiles. Coordinates restrict the corrected population fit; this is not a separately fitted coverage subset.',
   globalDescription:'Eligible records only; verified corrected-population coordinates.',
-  localDescription:'Pure states use exact-membership fits from the corrected 100% catalogue. Vertex unions restrict the corrected population fit. Historical exact-membership fits retain their solver provenance; no subset stress or convergence claim.',
+  localDescription:BUNDLE_PACK.pureVertexLocal?.populationRevision===x.revision?'Pure states and vertex unions use independent exact-membership local fits of complete sum-normalized compositions. Original solver provenance is retained; epoch completion does not certify convergence.':'Pure states use exact-membership fits from the corrected 100% catalogue. Vertex unions restrict the corrected population fit. Historical exact-membership fits retain their solver provenance; no subset stress or convergence claim.',
   graphGeometryDescription:'Eligible distinct-profile frequencies define pure reference coverage and graph lengths. Selected-record counts are displayed.',
   methods:'82 explicit laboratory controls excluded; 548 low-reference-coverage records retained with diagnostics. Historical labels, unresolved participant/specimen mappings and scientific holds remain. The coordinate bank is historical, not the eligibility population.'};
  if(x.sensitivityMode){

@@ -143,10 +143,17 @@ async function ensureNamedViewAssets(view){
  await ensureDatasetLoaded(view.dataset);
  if(view.neighborhood)await ensureEmbeddingFamiliesLoaded();
  await ensureSensitivityLoaded(view.populationComparison||'baseline');
- if(view.dataset==='comb-V3V4-tx'&&!view.selection?.participant?.active&&(view.populationComparison||'baseline')==='baseline'){
-  const asset=sensitivityBaseline.display,s=view.selection,kind=s?.selectedVertex!=null?'vertex':'group',selection=s?.selectedVertex??s?.selected;
+ if(view.dataset==='comb-V3V4-tx'&&!view.selection?.participant?.active){
+  const mode=view.populationComparison||'baseline',asset=(mode==='baseline'||rebuiltOnlyPopulation()?sensitivityBaseline:sensitivityVariants.get(mode))?.display;
+  if(!asset)return;
+  const s=view.selection,kind=s?.selectedVertex!=null?'vertex':'group',selection=s?.selectedVertex??s?.selected;
   const pure=view.stateMode==='pure'&&!!recordExtension(datasetRegistry.get(view.dataset))?.eligibility;
-  if(selection!=null&&(view.stateMode==='merged'||pure&&kind==='group')){const key=asset.contexts[JSON.stringify([kind,view.cohort==='all'?'records':view.cohort,pure?100:Number(view.coverage),selection])];await ensurePreparedFit(view.dataset,'combDisplay',key,asset)}
+  if(selection!=null&&(view.stateMode==='merged'||pure)){
+   const pop=view.cohort==='all'?'records':view.cohort,supplement=BUNDLE_PACK.pureVertexLocal;
+   const entry=supplement?.populationRevision===asset.revision?supplement.fits[supplement.contexts[JSON.stringify([pop,String(view.coverage),Number(selection)])]]:null;
+   const key=pure&&kind==='vertex'?entry?.existingFit:asset.contexts[JSON.stringify([kind,pop,pure?100:Number(view.coverage),selection])];
+   if(key)await ensurePreparedFit(view.dataset,'combDisplay',key,asset);
+  }
  }
 }
 async function restoreNamedView(view){

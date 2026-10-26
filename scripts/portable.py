@@ -175,6 +175,12 @@ def prepare(package, metadata_path, output, announce=True):
         validate(metadata['maxNormalizedEmbeddings'], population(package, original),
                  original['datasets']['comb-V3V4-tx']['dataset']['revision'])
         manifest['seed']['maxNormalizedEmbeddings'] = metadata['maxNormalizedEmbeddings']
+    pure_vertices = metadata.get('pureVertexLocal')
+    if pure_vertices:
+        from pure_vertex_supplement import package_part, saved_fits, validate as validate_pure_vertices
+        validate_pure_vertices(pure_vertices, package_part(package, original),
+                               dict(saved_fits(package, original)))
+        manifest['seed'].pop('pureVertexLocal', None)
     # Validate all scientific asset bytes before creating an output directory.
     retained = copy.deepcopy(original)
     for key in ('application', 'validator'):
@@ -223,6 +229,8 @@ def prepare(package, metadata_path, output, announce=True):
         return dict(url=url, bytes=len(raw), sha256=digest)
     manifest['application'] = publish(('VME_ASSETS.releaseControls();\n' + application).encode())
     manifest['validator'] = publish((HERE / 'bundle_format.js').read_bytes())
+    if pure_vertices:
+        manifest['datasets']['comb-V3V4-tx']['parts'].append(publish(encoded({'pureVertexLocal': pure_vertices}), 'json'))
     loader_desc = publish(loader.encode())
     bootstrap = '<script id="vme-http-manifest" type="application/json">' + encoded(manifest).decode().replace('</', '<\\/') + '</script><script src="' + loader_desc['url'] + '"></script>'
     pieces = []; cursor = 0

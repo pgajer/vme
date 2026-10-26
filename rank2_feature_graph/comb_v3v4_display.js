@@ -25,8 +25,10 @@ let combSelectionRevision=0;
 function deferCombSelection(kind,selection,retry){
  const request=++combSelectionRevision,bundle=datasetRegistry.get(META.id);
  const eligiblePure=activeStateMode==='pure'&&!!recordExtension(bundle)?.eligibility;
- if(!bundle.cohortAnalysis?.combDisplay||activeStateMode!=='merged'&&!(eligiblePure&&kind==='group'))return null;
- const asset=BUNDLE_PACK.combDisplay,key=combDisplayKey(kind,activeCohort,eligiblePure?100:Number(el('coverage').value),selection);
+ if(!bundle.cohortAnalysis?.combDisplay||activeStateMode!=='merged'&&!eligiblePure)return null;
+ const asset=BUNDLE_PACK.combDisplay,key=eligiblePure&&kind==='vertex'
+  ?pureVertexLocalEntry(activeCohort,el('coverage').value,selection)?.existingFit
+  :combDisplayKey(kind,activeCohort,eligiblePure?100:Number(el('coverage').value),selection);
  if(!key||asset.fits[key]||!Object.hasOwn(asset.deferredFits||{},key))return null;
  const data=DATA,coverage=el('coverage').value,revision=datasetSwitchRevision,participantRevision=participantOpenRevision,edge=selected,vertex=selectedVertex,rank=JSON.stringify(rank3);
  const current=()=>request===combSelectionRevision&&revision===datasetSwitchRevision&&data===DATA&&coverage===el('coverage').value&&participantRevision===participantOpenRevision&&edge===selected&&vertex===selectedVertex&&rank===JSON.stringify(rank3);

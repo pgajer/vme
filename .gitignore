@@ -57,3 +57,8 @@
 !/rank2_feature_graph/test_max_normalized_views.mjs
 !/scripts/max_normalized_supplement.py
 !/scripts/test_max_normalized_supplement.py
+
+# Independent local embedding supplement validation; data remain separate.
+!/scripts/pure_vertex_supplement.py
+!/scripts/test_pure_vertex_supplement.py
+!/rank2_feature_graph/test_pure_vertex_local.mjs
