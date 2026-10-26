@@ -136,18 +136,24 @@ function initializeAnalysisControls(){
  el('exportAssignments').onclick=()=>{const rows=exportAssignmentRows(),text=rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n');const url=URL.createObjectURL(new Blob([text],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download=`${META.id}_${activeCohort}_merged_${el('coverage').value}_assignments.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 }
 
+function updateAssignmentExportHelp(){
+ const box=el('assignmentExportHelp');
+ box.hidden=!DATA.assignment;
+ if(!DATA.assignment){box.innerHTML='';return}
+ const observed=new Set(eligibleIndices().map(i=>DATA.samples.pair[i]));
+ const missing=DATA.assignment.cores.filter(id=>!observed.has(id));
+ box.innerHTML='<summary>Assignment export help</summary><p>Export assignments CSV includes each eligible record in the selected dataset/cohort, its original state, merged group, assignment method and supporting diagnostics. Graph selections and visibility checkboxes do not restrict this export.</p><p>Export edges CSV retains all reference core groups, including zero-count rows. The catalogue’s Export CSV instead follows its displayed rows and filters.</p>'+(missing.length?`<p>Reference groups with no records in this dataset/cohort: ${missing.map(id=>esc(stateDisplayLabel(id))).join('; ')}.</p>`:'<p>Every reference core group has records in this dataset/cohort.</p>');
+}
 function inspect(){
- syncPureTable();mergedComponentModel();
+ syncPureTable();mergedComponentModel();updateAssignmentExportHelp();
  if(activeEmbeddingFamily&&familyGraphReady){familyInspectSelection();return}
  if(participant.active){renderParticipantSequence(participantRows());return}
  if(rank3UsesSamples()){rank3Inspect();return}
- inspectBase();if(pureTableIsCandidate())renderPureEvidenceTable(true);else renderMergedComponentTable();if(!DATA.records)return;
- const indices=hasSelection()?selectionFit().indices:DATA.overviewEmbeddings[el('coverage').value].indices;
+ inspectBase();if(pureTableIsCandidate())renderPureEvidenceTable(true);else renderMergedComponentTable();
+ if(!DATA.assignment)return;
  const box=document.createElement('details');box.style.whiteSpace='normal';
- let text='Repeated observations are not independent participants.';
- if(DATA.assignment&&!hasSelection()){const observed=new Set(current().edges.map(e=>e.id)),missing=DATA.assignment.cores.filter(id=>!observed.has(id));text+=` Observed ${observed.size} of ${DATA.assignment.cores.length} reference core groups.`;if(missing.length)text+=' Zero-record groups: '+missing.map(id=>id.split(',').map(j=>DATA.featureNames[j]).join(' + ')).join('; ')+'. Zero groups remain in the exported core-count table.'}
- if(DATA.assignment){const counts={};for(const i of indices){const method=DATA.assignment.methods[DATA.records[i].profile];counts[method]=(counts[method]||0)+1}const pure=new Set(indices.map(i=>DATA.purePairs[i]).filter(p=>p!==null));text+=` Original pure states: ${pure.size}. Assignment: core ${counts.core||0}; rank-3 support ${counts.rank3||0}; nearest neighbors ${counts.knn||0}. Core-pair labels do not imply those two taxa dominate every absorbed sample. Full assignment details are available in the CSV export.`}
- box.innerHTML='<summary>Sample membership and assignments</summary><p>'+esc(text)+'</p>';el('inspector').appendChild(box);
+ box.innerHTML='<summary>How samples are assigned</summary><ul><li><b>Original core membership:</b> samples whose original top-2 CST is a reference core group.</li><li><b>Top-3 CST support:</b> samples assigned from a non-core state through a shared top-3 CST connecting it to a reference core. This is a sample count, not a count of distinct top-3 CSTs.</li><li><b>Nearest-neighbor assignment:</b> remaining samples assigned by votes from nearby reference compositions.</li></ul><p>Merged groups are named after their reference core pair. Those two phylotypes are not necessarily the two most abundant in every sample assigned to the group.</p><p>Assignment counts describe the displayed samples; reference diamonds are excluded. Full assignment details are available through Layout and exports.</p>';
+ el('inspector').appendChild(box);
 }
 
 function edgeExportRows(){

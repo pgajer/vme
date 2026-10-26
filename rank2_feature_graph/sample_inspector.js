@@ -28,6 +28,19 @@ function assignmentComposition(indices){
  }
  return {n:indices.length,methods,states:[...states].sort((a,b)=>b[1]-a[1]||String(a[0]).localeCompare(String(b[0])))};
 }
+// Use the same post-filter membership as the plotted samples, never the unfiltered fit.
+function displayedAssignmentSummary(indices){
+ if(!DATA.assignment||!DATA.records)return '';
+ const c=assignmentComposition(indices),pairs=c.states.filter(([pair])=>pair!==null&&!DATA.rank1Groups?.[pair]).length;
+ const single=c.states.filter(([pair])=>DATA.rank1Groups?.[pair]).length;
+ const groups=new Set(indices.map(i=>DATA.samples.pair[i]).filter(pair=>pair!==null)),occupied=groups.size;
+ const singleGroups=[...groups].filter(pair=>DATA.rank1Groups?.[pair]).length;
+ const unit=META.observationLabel==='source records'?'samples':META.observationLabel;
+ const routes=[['core','Original core membership'],['rank3','Top-3 CST support'],['knn','Nearest-neighbor assignment']];
+ const unclassified=c.n-routes.reduce((n,[method])=>n+c.methods[method],0);
+ if(unclassified)routes.push(['unclassified','Unclassified']);
+ return `<ul><li>Original top-2 CSTs: ${fmt(pairs)}</li>${single?`<li>Original single-taxon compatibility groups: ${fmt(single)}</li>`:''}<li>Occupied merged groups: ${fmt(occupied)} of ${fmt(DATA.assignment.cores.length)} reference groups${singleGroups?` (including ${fmt(singleGroups)} single-taxon compatibility groups)`: ''}</li></ul><table class="assignmentSummary"><caption>Displayed ${esc(unit)} by assignment method</caption><thead><tr><th scope="col">Assignment method</th><th scope="col">n</th></tr></thead><tbody>${routes.map(([method,label])=>`<tr><th scope="row">${label}</th><td>${fmt(method==='unclassified'?unclassified:c.methods[method])}</td></tr>`).join('')}</tbody><tfoot><tr><th scope="row">Total</th><td>${fmt(c.n)}</td></tr></tfoot></table>`;
+}
 function updateSampleContext(indices){
  plottedSampleIndices=indices.slice();
  const edge=current().edges.find(e=>e.id===selected),node=current().nodes.find(n=>n.id===selectedVertex);
@@ -37,7 +50,7 @@ function updateSampleContext(indices){
  // Source records are the sample-counting unit; compositions and people stay separate.
  const recordSamples=META.observationLabel==='source records';
  if(recordSamples)counts[0]=counts[0].replace('source records','samples');
- el('sampleContext').innerHTML=`<strong>${esc(name)}</strong><ul>${counts.map((text,i)=>`<li${i===0&&recordSamples?' title="Samples count source records; repeated compositions remain separate samples."':''}>${esc(text)}</li>`).join('')}<li>${esc(target)}</li></ul>`;
+ el('sampleContext').innerHTML=`<strong>${esc(name)}</strong><ul>${counts.map((text,i)=>`<li${text.includes('known participants')?' title="Multiple samples may come from the same participant; samples are not independent participants."':i===0&&recordSamples?' title="Samples count source records; repeated compositions remain separate samples."':''}>${esc(text)}</li>`).join('')}<li>${esc(target)}</li></ul>${displayedAssignmentSummary(indices)}`;
  if(edge)el('sampleTitle').textContent=samplePanelTitle(sampleEmbeddingTitle(),edge.label);
  const c=assignmentComposition(indices),denominator=c.n||1,paired=c.states.filter(([pair])=>pair!==null).length,unpaired=c.states.find(([pair])=>pair===null)?.[1]||0;
  el('assignmentHeading').textContent=DATA.assignment?`Assignment composition · ${fmt(c.methods.core)} core / ${fmt(c.methods.rank3)} rank-3 / ${fmt(c.methods.knn)} neighbors`:`Original state composition · ${fmt(paired)} states${unpaired?' · '+fmt(unpaired)+' without a leading pair':''}`;

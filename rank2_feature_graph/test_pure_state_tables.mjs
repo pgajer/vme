@@ -1,0 +1,110 @@
+// Counts and display invariants, with no geometric computation or fitting.
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const coords=[[0,0,0],[1,1,1],[2,1,0],[3,2,1],[4,2,0],[5,1,0]];
+const DATA={samples:{ids:['a','b','c','d','e','f'],pair:['1,2','1,2','1,2','3,4','3,4','1,2'],coords},purePairs:['1,2','1,2','1,3','1,3','3,4',null],records:[{profile:0},{profile:0},{profile:1},{profile:2},{profile:3},{profile:4}],assignment:{methods:['core','rank3','knn','core','knn']}};
+const a={records:DATA.records,merged:{60:{pairs:['1,2','1,2','3,4','1,2','1,2'],bridges:{'1,3':{core:'1,2',score:1,sourceIntersection:1,coreIntersection:2,rank3:'1,2,3'}}}}};
+const bundle={data:{samples:{pair:['1,2','1,3','1,3','3,4',null]}},cohortAnalysis:a};
+const nodes={coverage:{value:'60'},inspector:{addEventListener:()=>{}},samples:{},scope:{},sampleEmbedding:{},panelSampleEmbedding:{},sampleTitle:{},sampleContext:{},sampleStatus:{},sampleLegend:{},sampleLegendItems:{}};
+const camera={eye:{x:2,y:1,z:3},center:{x:.2,y:.1,z:.3},up:{x:0,y:0,z:1}};
+const ctx=vm.createContext({DATA,META:{id:'fixture',populationName:'all',observationLabel:'records'},datasetRegistry:new Map([['fixture',bundle]]),selected:'1,2',selectedVertex:null,activeStateMode:'merged',participant:{active:false},activeEmbeddingFamily:null,rank3UsesSamples:()=>false,datasetKey:()=> 'fixture',eligibleIndices:()=>[0,1,2,3,4,5],el:id=>nodes[id],stateDisplayLabel:String,pairName:String,edgeColor:()=> '#123456',fmt:String,esc:String,assignmentNames:{core:'Core',rank3:'Rank-3 support',knn:'Neighbors'},exportScene:()=>({aspectmode:'manual',aspectratio:{x:1,y:2,z:3},xaxis:{range:[-3,10]}}),copyCamera:structuredClone,readCamera:()=>camera,retainMergedComponentFrame:()=>{},inspect:()=>{},refreshSamples:()=>{},current:()=>({nodes:[]}),updateSampleContext:()=>{},sampleCounts:ii=>String(ii.length),renderStateColors:()=>{},sampleDisplayColor:(i,c)=>c,samplePlotHover:String,sampleViewKey:()=> 'view',pendingSampleCamera:camera,Plotly:{react:(id,traces,layout)=>{nodes[id].data=traces;nodes[id].layout=layout}}});
+ctx.renderSamplePlot=(traces,layout,config)=>ctx.Plotly.react('samples',traces,layout,config);
+const titleSource=fs.readFileSync(new URL('cohort_views.js',import.meta.url),'utf8');
+vm.runInContext(titleSource.slice(titleSource.indexOf('function standardSampleEmbeddingTitle('),titleSource.indexOf('function sampleEmbeddingTitle(')),ctx);
+vm.runInContext(fs.readFileSync(new URL('pure_state_tables.js',import.meta.url),'utf8'),ctx);
+const run=s=>vm.runInContext(s,ctx),plain=x=>JSON.parse(JSON.stringify(x));const original=JSON.stringify([DATA,bundle]);
+ctx.model={n:4,rows:[{id:'1,2',n:2,checked:true},{id:'1,3',n:1,checked:true},{id:null,n:1,checked:true}]};
+run('syncPureTable()');let rows=plain(run('pureTableRows(false,model)'));
+assert.equal(rows[1].full,2);assert.equal(rows[1].captured,50);assert.equal(rows[1].percent,25);assert.equal(rows[1].bridge.coverage,50);
+assert.deepEqual(rows[1].routes,{rank3:1});assert.equal(rows[0].bridge.score,undefined);assert.match(rows[0].bridge.reason,/self-comparison/);
+assert.equal(rows.reduce((n,r)=>n+r.n,0),4);assert.equal(rows.reduce((n,r)=>n+r.percent,0),100);
+run('activeStateMode="pure";syncPureTable()');rows=plain(run('pureTableRows(true)'));
+assert.deepEqual(rows.map(r=>r.id),['1,2','1,3','3,4']); // disjoint previously assigned candidate retained
+assert.deepEqual(rows.map(r=>r.checked),[true,false,false]);assert.equal(rows[0].profiles,1);
+assert.match(rows[2].bridge.reason,/Unavailable/);assert.equal(rows[2].bridge.score,undefined);
+run('candidateComparison=true;candidateChecked.add("1,3");candidateSamples()');
+assert.deepEqual(plain(nodes.samples.data[0].ids),['0','1','2','3']);
+const points=plain(nodes.samples.data[0].x);assert.deepEqual(points,[0,1,2,3]);
+const scene=plain(nodes.samples.layout.scene);run('candidateChecked.clear();candidateSamples()');assert.equal(nodes.samples.data[0].ids.length,0);assert.deepEqual(plain(nodes.samples.layout.scene),scene);
+run('candidateChecked.add("1,3");candidateSamples()');assert.deepEqual(plain(nodes.samples.data[0].x),[2,3]);assert.deepEqual(plain(nodes.samples.layout.scene.camera),camera);
+run('pureTableSort={key:"n",descending:false}');assert.equal(run('pureTableRows(true)[0].id'),'1,2');
+run('selected="3,4";syncPureTable()');assert.equal(run('candidateComparison'),false);assert.deepEqual(plain(run('[...candidateChecked]')),['3,4']);
+assert.equal(JSON.stringify([DATA,bundle]),original);
+console.log('PASS: assigned/full denominators, routes, bridge provenance/NA, unique profiles, disjoint historical nomination, stable coordinates/bounds/camera, empty selection, resets and source immutability.');
+
+// Core/non-core inspection is a display partition of the eligible records.
+Object.assign(ctx,{hasSelection:()=>false,samplePlotHovers:ii=>ii.map(String),renderSampleLegend:()=>{},current:()=>DATA.graphs[nodes.coverage.value]});
+Object.assign(nodes,{pureNonCore:{},pureNonCoreControl:{},panelPureNonCore:{},panelPureNonCoreControl:{},vertexLabels:{checked:false}});
+nodes.sampleLegend.setAttribute=()=>{};
+DATA.graphs={60:{edges:[{id:'1,2'}],nodes:[]},100:{edges:[{id:'1,2'},{id:'1,3'},{id:'3,4'}],nodes:[]}};
+bundle.data.graphs=structuredClone(DATA.graphs);
+DATA.samples.pair=['1,2','1,2','1,3','1,3','3,4',null];DATA.referenceCoords=coords.map(p=>p.map(v=>v+10));
+const beforePartition=JSON.stringify(DATA);
+run('selected=null;activeStateMode="pure";syncPureCoverageControls()');
+assert.equal(nodes.pureNonCore.disabled,false);assert.equal(nodes.pureNonCore.checked,false);
+assert.deepEqual(plain(run('pureCoveragePartition()')),{core:[0,1],nonCore:[2,3,4],unpaired:[5]});
+run('changePureCoverage(true);pureCoverageSamples()');
+assert.deepEqual(plain(nodes.samples.data[0].ids),['2','3','4']);assert.deepEqual(plain(nodes.samples.data[0].x),[12,13,14]);assert.equal(nodes.samples.data[0].marker.color,'#a8adb2');
+const comparisonScene=plain(nodes.samples.layout.scene);assert.deepEqual(comparisonScene.camera,camera);
+assert.match(nodes.sampleStatus.textContent,/without a catalogued pair: 1/);
+run('changePureCoverage(false);pureCoverageSamples()');assert.deepEqual(plain(nodes.samples.data[0].ids),['0','1']);assert.deepEqual(plain(nodes.samples.data[0].x),[10,11]);assert.deepEqual(plain(nodes.samples.layout.scene),comparisonScene);
+const savedFull=DATA.graphs['100'];DATA.graphs['100']=DATA.graphs['60'];assert.deepEqual(plain(run('pureCoveragePartition()')),{core:[0,1],nonCore:[2,3,4],unpaired:[5]});DATA.graphs['100']=savedFull;
+ctx.eligibleIndices=()=>[1,3,5];assert.deepEqual(plain(run('pureCoveragePartition()')),{core:[1],nonCore:[3],unpaired:[5]});
+nodes.coverage.value='100';run('syncPureCoverageControls()');assert.equal(run('pureCoverageComparison'),null);run('changePureCoverage(true);pureCoverageSamples()');assert.deepEqual(plain(nodes.samples.data[0].ids),[]);assert.match(nodes.sampleStatus.textContent,/No samples in this category/);
+run('participant.active=true;syncPureCoverageControls()');assert.equal(nodes.pureNonCore.disabled,true);assert.equal(run('pureCoverageComparison'),null);
+run('participant.active=false;activeStateMode="merged";syncPureCoverageControls()');assert.equal(nodes.pureNonCoreControl.hidden,true);
+assert.equal(JSON.stringify(DATA),beforePartition);
+console.log('PASS: core/non-core partition, repeated record counts, eligible-population restriction, gray override, common reference coordinates, unchanged camera/frame, 100% empty view, missing-pair exclusion and inactive-mode reset.');
+
+// Stored checkbox preference is dataset scoped; bookmarks also retain framing.
+const preferences=new Map();ctx.datasetPanelStorage={getItem:k=>preferences.get(ctx.META.id+'|'+k)??null,setItem:(k,v)=>preferences.set(ctx.META.id+'|'+k,v)};
+run('activeStateMode="pure";changePureCoverage(true);pureCoverageComparison=null;syncPureCoverageControls()');
+assert.equal(nodes.pureNonCore.checked,true);assert.equal(nodes.panelPureNonCore.checked,true);
+ctx.META.id='other';run('pureCoverageComparison=null;syncPureCoverageControls()');assert.equal(nodes.pureNonCore.checked,false);
+ctx.META.id='fixture';run('syncPureCoverageControls()');assert.equal(nodes.pureNonCore.checked,true);
+ctx.view={stateMode:'pure',selection:{selected:null,selectedVertex:null}};
+ctx.bookmark=plain(run('capturePureCoverage()'));run('validatePureCoverage(bookmark,view)');
+assert.deepEqual(ctx.bookmark.frame.xaxis.range,[-3,10]);
+run('changePureCoverage(false);pureCoverageComparison=null;syncPureCoverageControls()');assert.equal(nodes.pureNonCore.checked,false);
+run('restorePureCoverage(bookmark);syncPureCoverageControls()');assert.equal(nodes.pureNonCore.checked,true);
+assert.deepEqual(plain(run('pureCoverageComparison.frame')),ctx.bookmark.frame);
+for(const bad of [{...ctx.bookmark,nonCore:'true'},{...ctx.bookmark,frame:{xaxis:{range:[0,Infinity]}}},{...ctx.bookmark,frame:{aspectratio:{x:0,y:1,z:1}}}]){ctx.bad=bad;assert.throws(()=>run('validatePureCoverage(bad,view)'),/Invalid saved pure/)}
+assert.throws(()=>run('validatePureCoverage(bookmark,{...view,stateMode:"merged"})'),/Invalid saved pure/);
+run('restorePureCoverage(undefined);syncPureCoverageControls()');assert.equal(nodes.pureNonCore.checked,false);
+console.log('PASS: dataset-scoped remembered checkbox, core/non-core bookmark bounds, legacy unchecked default and malformed bookmark rejection.');
+
+// Summary counts follow displayed records, including duplicates, after visibility filters.
+const summarySource=fs.readFileSync(new URL('sample_inspector.js',import.meta.url),'utf8');
+const summaryNodes={coverage:{value:'80'},sampleContext:{},assignmentHeading:{},assignmentComposition:{},sampleTitle:{},assignmentExportHelp:{}};
+const summaryData={records:[{profile:0},{profile:0},{profile:1},{profile:2},{profile:3}],samples:{pair:['a','a','a','b','b']},purePairs:['a','a','c','d',null],assignment:{methods:['core','rank3','knn','unknown'],cores:['a','b','empty'],referenceCoreCoverage:80.4}};
+const summaryContext=vm.createContext({DATA:summaryData,META:{observationLabel:'source records'},el:id=>summaryNodes[id],fmt:n=>n.toLocaleString('en-US'),esc:String,pairName:String,assignmentNames:{core:'Core',rank3:'Rank-3',knn:'Neighbors'},selected:null,selectedVertex:null,current:()=>({edges:[{id:'a',frequency:3},{id:'b',frequency:2}],nodes:[]}),sampleCounts:ii=>`${ii.length} source records · 3 distinct compositions · 2 known participants`,renderSampleMatches(){},eligibleIndices:()=>[0,1,2,3,4],stateDisplayLabel:String});
+vm.runInContext(summarySource.slice(summarySource.indexOf('function assignmentComposition('),summarySource.indexOf('function pinSample(')),summaryContext);
+vm.runInContext(titleSource.slice(titleSource.indexOf('function updateAssignmentExportHelp('),titleSource.indexOf('function inspect(')),summaryContext);
+vm.runInContext('updateSampleContext([0,1,2,3,4])',summaryContext);
+assert.match(summaryNodes.sampleContext.innerHTML,/Original top-2 CSTs: 3/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Occupied merged groups: 2 of 3/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Original core membership<\/th><td>2/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Top-3 CST support<\/th><td>1/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Nearest-neighbor assignment<\/th><td>1/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Unclassified<\/th><td>1/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Total<\/th><td>5/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Multiple samples may come from the same participant/);
+vm.runInContext('updateSampleContext([0,1,2])',summaryContext);
+assert.match(summaryNodes.sampleContext.innerHTML,/Occupied merged groups: 1 of 3/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Total<\/th><td>3/);
+assert.doesNotMatch(summaryNodes.sampleContext.innerHTML,/Unclassified/);
+vm.runInContext('updateSampleContext([]);updateAssignmentExportHelp()',summaryContext);
+assert.match(summaryNodes.sampleContext.innerHTML,/Occupied merged groups: 0 of 3/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Total<\/th><td>0/);
+assert.match(summaryNodes.assignmentExportHelp.innerHTML,/cohort: empty/);
+assert.doesNotMatch(summaryNodes.assignmentExportHelp.innerHTML,/cohort: a/); // hidden is not absent from export
+summaryData.rank1Groups={a:1};
+vm.runInContext('updateSampleContext([0,1,2,3,4]);updateAssignmentExportHelp()',summaryContext);
+assert.match(summaryNodes.sampleContext.innerHTML,/Original top-2 CSTs: 2/);
+assert.match(summaryNodes.sampleContext.innerHTML,/Original single-taxon compatibility groups: 1/);
+assert.match(summaryNodes.sampleContext.innerHTML,/including 1 single-taxon compatibility groups/);
+assert.doesNotMatch(summaryNodes.assignmentExportHelp.innerHTML,/cohort: a/);
+summaryData.assignment=null;
+vm.runInContext('updateSampleContext([0]);updateAssignmentExportHelp()',summaryContext);
+assert.doesNotMatch(summaryNodes.sampleContext.innerHTML,/assignmentSummary/);
+assert.equal(summaryNodes.assignmentExportHelp.hidden,true);
+console.log('PASS: displayed assignment totals, duplicate records, empty/hidden states, unknown routes, participant tooltip, pure-mode reset and independent export scope.');
