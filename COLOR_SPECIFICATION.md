@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 12 · reviewed 26 October 2026.
+Specification version 13 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -78,13 +78,19 @@ colors do not redefine graph state colors or assignments.
 
 **Scale width by 2-CST size** starts enabled. **Edge thickness** ranges from
 1 to 12 in half-pixel steps, with a default of 6. With scaling enabled, the
-unselected width is `1 + (thickness - 1) × sqrt(n / maximum state count)`;
+unselected width is `1 + (thickness - 1) × (n / maximum state count)^strength`;
 with scaling disabled, every edge uses the chosen thickness. Widths are rounded
 to half-pixel steps. Selected edges and participant-state edges gain 2 pixels.
 Counts use the whole current graph, before selection or degree filtering, so
 restricting a subgraph does not inflate its edge widths. Counts retain their
 existing observation unit. The minimum width preserves small states; opacity
 remains independently controlled by fading.
+
+**Thickness scaling strength** appears when size scaling is enabled. Its range
+is 0.05–2.00 in steps of 0.05, with default 0.50 (the previous square-root
+scaling). Lower strengths make widths more similar; higher strengths emphasize
+larger states. At 1.00 the width above the minimum is linear in state size.
+Older saved settings and named views retain the 0.50 default.
 
 The controls apply to ordinary and participant graphs in 2D and 3D, including
 exports, and persist per dataset and in named views. Changing widths does not

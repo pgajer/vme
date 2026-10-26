@@ -118,19 +118,23 @@ function syncGraphFadeControls(){
  if(output)output.textContent=graphFadeStrength().toFixed(2);
 }
 function graphEdgeWidthValue(value){const n=Number(value);return Number.isFinite(n)&&n>=1&&n<=12?Math.round(n*2)/2:6}
-function graphWidthSettings(){return {scaled:el('graphWidthBySize')?.checked!==false,maximum:graphEdgeWidthValue(el('graphEdgeWidth')?.value)}}
+function graphWidthStrengthValue(value){const n=Number(value);return Number.isFinite(n)&&n>=.05&&n<=2?Math.round(n*20)/20:.5}
+function graphWidthSettings(){return {scaled:el('graphWidthBySize')?.checked!==false,maximum:graphEdgeWidthValue(el('graphEdgeWidth')?.value),strength:graphWidthStrengthValue(el('graphWidthStrength')?.value)}}
 function restoreGraphWidthSettings(settings){
  if(el('graphWidthBySize'))el('graphWidthBySize').checked=settings?.scaled!==false;
  if(el('graphEdgeWidth'))el('graphEdgeWidth').value=String(graphEdgeWidthValue(settings?.maximum));
+ if(el('graphWidthStrength'))el('graphWidthStrength').value=String(graphWidthStrengthValue(settings?.strength));
  syncGraphWidthControls();
 }
 function syncGraphWidthControls(){
  const s=graphWidthSettings(),output=el('graphEdgeWidthValue');if(output)output.textContent=s.maximum.toFixed(1)+' px';
+ if(el('graphWidthStrengthControl'))el('graphWidthStrengthControl').hidden=!s.scaled;
+ if(el('graphWidthStrengthValue'))el('graphWidthStrengthValue').textContent=s.strength.toFixed(2);
 }
 function graphEdgeWidth(e,active=false,reference=current(),maximum=Math.max(0,...reference.edges.map(edge=>edge.frequency))){
  const settings=graphWidthSettings();
  const ratio=maximum>0?Math.max(0,Math.min(1,e.frequency/maximum)):0;
- const width=settings.scaled?1+(settings.maximum-1)*Math.sqrt(ratio):settings.maximum;
+ const width=settings.scaled?1+(settings.maximum-1)*Math.pow(ratio,settings.strength):settings.maximum;
  // Half-pixel bins bound WebGL trace count; 2D and 3D use the same widths.
  return Math.round(width*2)/2+(active?2:0);
 }

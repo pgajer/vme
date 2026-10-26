@@ -16,6 +16,18 @@ const subset={nodes:graph.nodes.slice(2),edges:[graph.edges[2]]};
 assert.equal(c.graphEdgeWidthGroups(subset,()=>false)[0].width,1.5,'Filtering must not rescale a rare state');
 const byEdge=traces=>new Map(traces.flatMap(t=>[...new Set(t.customdata.filter(Boolean))].map(id=>[id,{width:t.line.width,coords:t.x.map((x,i)=>[x,t.y[i],t.z[i]]).filter((_,i)=>t.customdata[i]===id)}])));
 const initial=byEdge(c.graphEdgeTraces(graph,lookup));
+for(const [strength,widths] of [[.05,[6,5.5,5]],[.5,[6,3.5,1.5]],[1,[6,2.5,1]],[2,[6,1.5,1]]]){
+ c.restoreGraphWidthSettings({scaled:true,maximum:6,strength});
+ assert.deepEqual(graph.edges.map(e=>c.graphEdgeWidth(e)),widths,'Strength changes size contrast, retaining the maximum and minimum');
+ const changed=byEdge(c.graphEdgeTraces(graph,lookup));
+ for(const [id,old] of initial)assert.deepEqual(changed.get(id).coords,old.coords,'Strength preserves coordinates');
+ assert.equal(c.graphEdgeWidthGroups(subset,()=>false)[0].width,widths[2],'Strength still uses the full-graph denominator');
+ assert.equal(el('graphWidthStrengthControl').hidden,false);
+}
+for(const bad of [null,0,-1,2.1,NaN,'bad']){c.restoreGraphWidthSettings({strength:bad});assert.equal(c.graphWidthSettings().strength,.5)}
+c.restoreGraphWidthSettings({scaled:false,maximum:6,strength:2});assert.deepEqual(graph.edges.map(e=>c.graphEdgeWidth(e)),[6,6,6]);assert.equal(el('graphWidthStrengthControl').hidden,true);
+c.restoreGraphWidthSettings({scaled:true,maximum:6});assert.equal(c.graphWidthSettings().strength,.5,'Older named views keep square-root scaling');
+
 c.restoreGraphWidthSettings({scaled:true,maximum:10});
 const wider=byEdge(c.graphEdgeTraces(graph,lookup));
 for(const [id,old] of initial){assert.deepEqual(wider.get(id).coords,old.coords);assert(wider.get(id).width>old.width)}
@@ -25,7 +37,7 @@ assert.deepEqual(clipped.map(t=>t.line.width),selectedTraces.map(t=>t.line.width
 c.restoreGraphWidthSettings({scaled:false,maximum:4});assert.deepEqual(graph.edges.map(e=>c.graphEdgeWidth(e)),[4,4,4]);
 assert.equal(c.graphEdgeTraces({nodes:[],edges:[]},lookup).length,0);
 for(const bad of [null,0,99,NaN,'bad']){c.restoreGraphWidthSettings({maximum:bad});assert.equal(c.graphWidthSettings().maximum,6)}
-c.restoreGraphWidthSettings();assert.deepEqual(plain(c.graphWidthSettings()),{scaled:true,maximum:6});
+c.restoreGraphWidthSettings();assert.deepEqual(plain(c.graphWidthSettings()),{scaled:true,maximum:6,strength:.5});
 assert.equal(JSON.stringify({graph,lookup:[...lookup]}),before);
 // Exercise the actual camera-trimming path with variable edge-trace counts.
 c.graphGeometry=()=>({g:graph,lookup});c.graphScreenPoint=p=>({x:p[0]*10,y:p[1]*10});c.liveViewCamera=()=>({eye:{x:1,y:2,z:3}});c.participant={active:false};
