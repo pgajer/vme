@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 11 · reviewed 26 October 2026.
+Specification version 12 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -47,7 +47,10 @@ graph mode, selected samples and saved embedding:
   not imply that only two taxa occur in a sample. This is available within a
   merged group as well as in population and vertex views.
 - **Cohorts** uses recorded cohort identifiers, with deterministic colors keyed
-  by the complete identifier. Reviewed annotation metadata takes precedence over
+  by the complete identifier. Major cohorts have fixed, contrasting colors
+  (CONTRA blue, HMP orange, JiVitA green, LSVF purple, MM vermilion); other
+  identifiers use a fixed categorical palette. Colors never depend on frequency,
+  selection, or which datasets are loaded. Reviewed annotation metadata takes precedence over
   older umbrella labels, joined by exact record ID (including the HMP/U01
   split in the 40-participant panel). Missing cohort metadata is Unclassified (gray).
   Distinct records retain separate cohort identities even at identical
@@ -70,6 +73,24 @@ The original-pair component controls still describe membership within a selected
 merged group. Their color pickers edit the shared pair palette; select Pure
 2-CSTs to see those component colors in the sample view. Cohort and VALENCIA2
 colors do not redefine graph state colors or assignments.
+
+## Graph edge thickness
+
+**Scale width by 2-CST size** starts enabled. **Edge thickness** ranges from
+1 to 12 in half-pixel steps, with a default of 6. With scaling enabled, the
+unselected width is `1 + (thickness - 1) × sqrt(n / maximum state count)`;
+with scaling disabled, every edge uses the chosen thickness. Widths are rounded
+to half-pixel steps. Selected edges and participant-state edges gain 2 pixels.
+Counts use the whole current graph, before selection or degree filtering, so
+restricting a subgraph does not inflate its edge widths. Counts retain their
+existing observation unit. The minimum width preserves small states; opacity
+remains independently controlled by fading.
+
+The controls apply to ordinary and participant graphs in 2D and 3D, including
+exports, and persist per dataset and in named views. Changing widths does not
+change sample selection, coordinates, graph layouts, or state counts. WebGL
+edges are grouped by width to avoid one trace per edge; projection trimming
+updates only those edge traces.
 
 ## Optional graph fading by state size
 

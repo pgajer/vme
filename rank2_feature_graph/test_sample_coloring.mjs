@@ -53,3 +53,10 @@ c.BUNDLE_PACK.annotations={test:{records:[{id:'a',cohort:'HMP'},{id:'b',cohort:'
 assert.equal(run('sampleColorCategory(0).id'),'HMP');assert.equal(run('sampleColorCategory(1).id'),'U01');assert.equal(DATA.records[0].cohort,'A');
 c.DATA={samples:bundle.data.samples};assert.equal(run('sampleColorCategory(0).id'),'Multiple cohorts');
 console.log('PASS: reviewed cohort metadata refines umbrella labels without changing source records.');
+
+const major=['CONTRA','HMP','JiVitA','LSVF','MM','PRJNA549339','GALE','V400','Douching','CHARM','U01','PreSSMat','ZAPPS','PAPCLEAR'];
+const palette=major.map(id=>c.sampleCohortColor(id));assert.equal(new Set(palette).size,major.length);
+const other=c.sampleCohortColor('new-cohort');c.META={id:'another-dataset'};
+assert.deepEqual(major.map(id=>c.sampleCohortColor(id)),palette);assert.equal(c.sampleCohortColor('new-cohort'),other);
+assert.equal(c.sampleCohortColor(null),'#7c878d');assert.equal(c.sampleCohortColor('Multiple cohorts'),'#686868');
+console.log('PASS: distinct major-cohort palette, fixed cross-dataset identities, deterministic fallback and neutral missing/mixed cohorts.');

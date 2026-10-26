@@ -41,7 +41,7 @@ function createDatasetPanelStorage(storage,identity){
 const datasetPanelNativeStorage=(()=>{try{return typeof window==='undefined'?localStorage:window.localStorage}catch{return null}})();
 const datasetPanelStorage=createDatasetPanelStorage(datasetPanelNativeStorage,()=>{try{return activeEmbeddingFamily?.id||META.id}catch{return META.id}});
 let datasetPanelReady=false,datasetPanelRestoring=false,datasetPanelLayout=null,datasetPanelControlDefaults=null,datasetPanelDetailDefaults=null;
-const datasetPanelControlIds=['dimension','vertexLabels','graphFadeBySize','graphFadeStrength','graphDegreeFilter','graphMinimumDegree','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
+const datasetPanelControlIds=['dimension','vertexLabels','graphFadeBySize','graphFadeStrength','graphWidthBySize','graphEdgeWidth','graphDegreeFilter','graphMinimumDegree','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
 function panelReadJson(key,fallback){try{return JSON.parse(datasetPanelStorage.getItem(key))??fallback}catch{return fallback}}
 function panelControlSnapshot(){return Object.fromEntries(datasetPanelControlIds.map(id=>[id,el(id).type==='checkbox'?el(id).checked:el(id).value]))}
 function saveDatasetPanelSettings(){
@@ -78,6 +78,7 @@ function restoreDatasetPanelSettings(){
   }
   // Clamp legacy strengths to the current slider range; preserve saved on/off choices.
   setGraphFadeStrength(valid&&saved.controls?.graphFadeStrength!==undefined?saved.controls.graphFadeStrength:valid&&saved.controls?.graphFadeBySize===true ? .25 : .1);
+  restoreGraphWidthSettings({scaled:valid?saved.controls?.graphWidthBySize:undefined,maximum:valid?saved.controls?.graphEdgeWidth:undefined});
   restoreGraphDegreeSettings({enabled:valid&&saved.controls?.graphDegreeFilter===true,minimum:valid?saved.controls?.graphMinimumDegree:2});
   participant.axis=valid&&saved.composition?.axis==='elapsed'?'elapsed':'visit';
   for(const k of ['allTaxa','catalogue','stateBackground'])participant[k]=valid&&typeof saved.composition?.[k]==='boolean'?saved.composition[k]:k==='stateBackground';

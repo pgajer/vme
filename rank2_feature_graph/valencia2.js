@@ -30,10 +30,18 @@ function sampleCohortModel(){
  for(const original of source){const r={...original,cohort:reviewed.get(original.id)??original.cohort};byId.set(r.id,r);if(!byProfile.has(r.profile))byProfile.set(r.profile,new Set());byProfile.get(r.profile).add(r.cohort||null)}
  const model={source,annotations,byProfile,byId};sampleCohortCache.set(bundle,model);return model;
 }
+// Fixed cohort identities: never rank or reassign colors within a displayed subset.
+const sampleMajorCohortColors=Object.freeze({
+ CONTRA:'#0072B2',HMP:'#E69F00',JiVitA:'#009E73',LSVF:'#AA4499',MM:'#D55E00',
+ PRJNA549339:'#8C564B',GALE:'#56B4E9',V400:'#CC79A7',Douching:'#8C8C00',
+ CHARM:'#222222',U01:'#332288',PreSSMat:'#44AA99',ZAPPS:'#CC3311',PAPCLEAR:'#882255'
+});
+const sampleOtherCohortPalette=['#393B79','#637939','#8C6D31','#843C39','#7B4173','#3182BD','#31A354','#756BB1','#636363','#E6550D','#6BAED6','#74C476','#9E9AC8','#969696','#FD8D3C','#CE6DBD','#BD9E39','#AD494A','#8CA252','#6B6ECF'];
 function sampleCohortColor(id){
  if(!id)return '#7c878d';if(id==='Multiple cohorts')return '#686868';
+ if(Object.hasOwn(sampleMajorCohortColors,id))return sampleMajorCohortColors[id];
  let hash=0;for(const c of id)hash=(hash*31+c.charCodeAt(0))>>>0;
- return `hsl(${hash*137.508%360},58%,42%)`;
+ return sampleOtherCohortPalette[hash%sampleOtherCohortPalette.length];
 }
 function sampleColorCategory(index,record=null,profile=null,{background=false}={}){
  const bundle=sampleColorBundle();if(!bundle)return null;

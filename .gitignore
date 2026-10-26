@@ -65,3 +65,4 @@
 !/rank2_feature_graph/test_pure_vertex_local.mjs
 
 !/rank2_feature_graph/test_sample_coloring.mjs
+!/rank2_feature_graph/test_graph_appearance.mjs

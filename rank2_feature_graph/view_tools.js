@@ -117,6 +117,30 @@ function syncGraphFadeControls(){
  if(control)control.hidden=el('graphFadeBySize')?.checked!==true;
  if(output)output.textContent=graphFadeStrength().toFixed(2);
 }
+function graphEdgeWidthValue(value){const n=Number(value);return Number.isFinite(n)&&n>=1&&n<=12?Math.round(n*2)/2:6}
+function graphWidthSettings(){return {scaled:el('graphWidthBySize')?.checked!==false,maximum:graphEdgeWidthValue(el('graphEdgeWidth')?.value)}}
+function restoreGraphWidthSettings(settings){
+ if(el('graphWidthBySize'))el('graphWidthBySize').checked=settings?.scaled!==false;
+ if(el('graphEdgeWidth'))el('graphEdgeWidth').value=String(graphEdgeWidthValue(settings?.maximum));
+ syncGraphWidthControls();
+}
+function syncGraphWidthControls(){
+ const s=graphWidthSettings(),output=el('graphEdgeWidthValue');if(output)output.textContent=s.maximum.toFixed(1)+' px';
+}
+function graphEdgeWidth(e,active=false,reference=current(),maximum=Math.max(0,...reference.edges.map(edge=>edge.frequency))){
+ const settings=graphWidthSettings();
+ const ratio=maximum>0?Math.max(0,Math.min(1,e.frequency/maximum)):0;
+ const width=settings.scaled?1+(settings.maximum-1)*Math.sqrt(ratio):settings.maximum;
+ // Half-pixel bins bound WebGL trace count; 2D and 3D use the same widths.
+ return Math.round(width*2)/2+(active?2:0);
+}
+function graphEdgeWidthGroups(g,classify){
+ const groups=new Map(),reference=current(),maximum=Math.max(0,...reference.edges.map(e=>e.frequency));
+ for(const e of g.edges){const active=classify(e),width=graphEdgeWidth(e,active,reference,maximum),key=Number(active)+':'+width;
+  if(!groups.has(key))groups.set(key,{active,width,edges:[]});groups.get(key).edges.push(e);
+ }
+ return [...groups.values()].sort((a,b)=>Number(a.active)-Number(b.active)||a.width-b.width);
+}
 // Normalize against the full current reference, so selecting a subgraph does
 // not turn a rare state opaque. Degree and incident support use displayed edges.
 function graphFadeStyle(g,reference=current(),enabled=el('graphFadeBySize')?.checked===true,strength=graphFadeStrength()){
@@ -137,15 +161,15 @@ function graphColorOpacity(color,opacity){
 }
 function graphEdgeTraces(g,lookup,project=null){
  const degrees=graphNodeDegrees(g),fade=graphFadeStyle(g);
- return [false,true].map(active=>{
+ return graphEdgeWidthGroups(g,activeEdge).map(({active,width,edges})=>{
   const pts=[],ids=[],text=[],colors=[],base=active?'#cf6b21':'#82a9b9';
-  for(const e of g.edges.filter(e=>activeEdge(e)===active)){
+  for(const e of edges){
    const a=lookup.get(e.from),b=lookup.get(e.to),ends=project?clippedSegment(a,b,project,graphNodeSize(degrees.get(e.from))+5,graphNodeSize(degrees.get(e.to))+5):[a,b];if(!ends)continue;
    const steps=g.edges.length>100?2:9,color=graphColorOpacity(base,fade.edge(e));
    for(let i=0;i<steps;i++){pts.push(ends[0].map((v,j)=>v+(ends[1][j]-v)*i/(steps-1)));ids.push(e.id);colors.push(color);text.push(`${esc(e.key)}: ${esc(e.label)}<br>n=${e.frequency}; Endpoint distance=${fmt(e.length)} pp${graphLayoutHover(e)}`)}
    pts.push([null,null,null]);ids.push(null);text.push('');colors.push(color);
   }
-  return {type:'scatter3d',mode:'lines+markers',x:pts.map(p=>p[0]),y:pts.map(p=>p[1]),z:pts.map(p=>p[2]),customdata:ids,connectgaps:false,line:{color:el('graphFadeBySize')?.checked?colors:base,width:active?7:3},marker:{size:3,color:'rgba(0,0,0,0)'},text,hovertemplate:'%{text}<extra></extra>'};
+  return {type:'scatter3d',mode:'lines+markers',meta:{graphEdgeGroup:Number(active)+':'+width},x:pts.map(p=>p[0]),y:pts.map(p=>p[1]),z:pts.map(p=>p[2]),customdata:ids,connectgaps:false,line:{color:el('graphFadeBySize')?.checked?colors:base,width},marker:{size:3,color:'rgba(0,0,0,0)'},text,hovertemplate:'%{text}<extra></extra>'};
  });
 }
 function graphVertexAtPointer(x,y){
@@ -160,6 +184,10 @@ function clippedSegment(a,b,project,gap=12,endGap=gap){
  function boundary(origin,reverse,padding){let lo=0,hi=1;for(let i=0;i<24;i++){const t=(lo+hi)/2,p=project(at(reverse?1-t:t));if(!p)return reverse?1:0;if(Math.hypot(p.x-origin.x,p.y-origin.y)<padding)lo=t;else hi=t}return reverse?1-hi:hi}
  const start=boundary(pa,false,gap),end=boundary(pb,true,endGap);return start<end?[at(start),at(end)]:null;
 }
+function matchingGraphEdgeTraces(traces){
+ const data=el('graph3d').data||[];
+ return traces.length>0&&data.filter(t=>t.meta?.graphEdgeGroup!==undefined).length===traces.length&&traces.every((t,i)=>t.meta?.graphEdgeGroup!==undefined&&t.meta.graphEdgeGroup===data[i]?.meta?.graphEdgeGroup);
+}
 let graphTrimming=false;
 async function trimGraphEdges(){
  if(typeof window!=='undefined'&&document.body.classList.contains('panelMaximized')&&!el('featurePanel').classList.contains('maximized'))return;
@@ -167,19 +195,19 @@ async function trimGraphEdges(){
  const camera=liveViewCamera(el('graph3d'));
  const {g,lookup}=graphGeometry(),degrees=graphNodeDegrees(g),updates=[];
  if(participant.active){
-  const traces=participantGraphEdgeTraces(g,lookup,graphScreenPoint);graphTrimming=true;
+  const traces=participantGraphEdgeTraces(g,lookup,graphScreenPoint);if(!matchingGraphEdgeTraces(traces))return;graphTrimming=true;
   try{
    // Restyling density edges can reapply the stale layout camera. Commit the
    // gesture's live camera first, as in the ordinary graph branch below.
    await Plotly.relayout(el('graph3d'),{'scene.camera':camera});
-   await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text','line'].map(k=>[k,traces.map(t=>t[k])])),[0,1]);
+   await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text','line'].map(k=>[k,traces.map(t=>t[k])])),traces.map((_,i)=>i));
   }finally{graphTrimming=false}
   return;
  }
- updates.push(...graphEdgeTraces(g,lookup,graphScreenPoint));
+ updates.push(...graphEdgeTraces(g,lookup,graphScreenPoint));if(!matchingGraphEdgeTraces(updates))return;
  graphTrimming=true;try{
   await Plotly.relayout(el('graph3d'),{'scene.camera':camera});
-  await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text','line'].map(k=>[k,updates.map(u=>u[k])])),[0,1]);
+  await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text','line'].map(k=>[k,updates.map(u=>u[k])])),updates.map((_,i)=>i));
  }finally{graphTrimming=false}
 }
 (function installViewExport(){

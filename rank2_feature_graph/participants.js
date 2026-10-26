@@ -903,9 +903,9 @@ function participantGraphEnds(a,b,project,gap=12,endGap=gap){
 }
 function participantGraphEdgeTraces(g,lookup,project=null){
  const m=participantGraphModel(),degrees=graphNodeDegrees(g),fade=graphFadeStyle(g),fading=el('graphFadeBySize')?.checked===true;
- return [false,true].map(subject=>{
+ return graphEdgeWidthGroups(g,e=>m.byEdge.has(e.id)).map(({active:subject,width,edges})=>{
   const pts=[],ids=[],text=[],colors=[];
-  for(const e of g.edges.filter(e=>m.byEdge.has(e.id)===subject)){
+  for(const e of edges){
    const a=lookup.get(e.from),b=lookup.get(e.to),ends=project?participantGraphEnds(a,b,project,graphNodeSize(degrees.get(e.from))+5,graphNodeSize(degrees.get(e.to))+5):[a,b];if(!ends)continue;
    const delta=b.map((v,j)=>v-a[j]),norm=delta.reduce((s,v)=>s+v*v,0),u=p=>norm?p.reduce((s,v,j)=>s+(v-a[j])*delta[j],0)/norm:0;
    const start=u(ends[0]),end=u(ends[1]),steps=subject?65:2;
@@ -916,8 +916,8 @@ function participantGraphEdgeTraces(g,lookup,project=null){
    }
    pts.push([null,null,null]);ids.push(null);text.push('');colors.push(fading?'rgba(0,0,0,0)':0);
   }
-  return {type:'scatter3d',mode:'lines+markers',x:pts.map(p=>p[0]),y:pts.map(p=>p[1]),z:pts.map(p=>p[2]),customdata:ids,text,connectgaps:false,
-   line:fading?{color:colors,width:subject?7:2}:subject?{color:colors,colorscale:[[0,'#ffe100'],[1,'#ff0000']],cmin:0,cmax:1,width:7,showscale:false}:{color:'#c3c9cc',width:2},
+  return {type:'scatter3d',mode:'lines+markers',meta:{graphEdgeGroup:Number(subject)+':'+width},x:pts.map(p=>p[0]),y:pts.map(p=>p[1]),z:pts.map(p=>p[2]),customdata:ids,text,connectgaps:false,
+   line:fading?{color:colors,width}:subject?{color:colors,colorscale:[[0,'#ffe100'],[1,'#ff0000']],cmin:0,cmax:1,width,showscale:false}:{color:'#c3c9cc',width},
    marker:{size:3,color:'rgba(0,0,0,0)'},hovertemplate:'%{text}<extra></extra>'};
  });
 }
@@ -942,14 +942,14 @@ function participantGraphScene(lookup){
 }
 function participantGraphSvgScale(){const rect=el('graph').getBoundingClientRect();return transform.k*(Math.min(rect.width/1000,rect.height/740)||1)}
 function participantGraphSvg(layer,g){
- const m=participantGraphModel(),scale=participantGraphSvgScale(),degrees=graphNodeDegrees(g),fade=graphFadeStyle(g);
+ const m=participantGraphModel(),scale=participantGraphSvgScale(),degrees=graphNodeDegrees(g),fade=graphFadeStyle(g),maximum=Math.max(0,...current().edges.map(e=>e.frequency));
  for(const e of g.edges){
   const a=coords[e.from],b=coords[e.to],ends=participantGraphEnds(a,b,p=>({x:p[0]*scale,y:p[1]*scale}),graphNodeSize(degrees.get(e.from),2)+3,graphNodeSize(degrees.get(e.to),2)+3);if(!ends)continue;
   const positions=m.byEdge.get(e.id),steps=positions?64:1;
   for(let i=0;i<steps;i++){
    const at=t=>ends[0].map((v,j)=>v+(ends[1][j]-v)*t),from=at(i/steps),to=at((i+1)/steps);
    const mid=at((i+.5)/steps),delta=b.map((v,j)=>v-a[j]),norm=delta.reduce((s,v)=>s+v*v,0),t=norm?mid.reduce((s,v,j)=>s+(v-a[j])*delta[j],0)/norm:0;
-   const line=node('line',{x1:from[0],y1:from[1],x2:to[0],y2:to[1],stroke:positions?participantDensityColor(m.peak?participantEdgeDensity(positions,t)/(m.total*m.peak):0):'#c3c9cc','stroke-opacity':fade.edge(e),'stroke-width':(positions?5:2)/scale,class:'edge','data-edge':e.id},layer);
+   const line=node('line',{x1:from[0],y1:from[1],x2:to[0],y2:to[1],stroke:positions?participantDensityColor(m.peak?participantEdgeDensity(positions,t)/(m.total*m.peak):0):'#c3c9cc','stroke-opacity':fade.edge(e),'stroke-width':graphEdgeWidth(e,!!positions,current(),maximum)/scale,class:'edge','data-edge':e.id},layer);
    node('title',{},line,participantGraphHover(e).replaceAll('<br>','\n'));
   }
  }
