@@ -659,14 +659,13 @@ async function participantSamples(){
 }
 function installControlHelp(){
  const explanations={
-  datasetSelect:()=> 'Select the dataset to explore. Dataset-specific cohorts, states and participants update together. '+el('datasetMethods').textContent,
+  datasetSelect:()=> 'Select the dataset to explore. Dataset-specific cohorts, states and participants update together. Choose Load dataset bundle… at the end of this list to load a prepared JSON file; it is validated before use. '+el('datasetMethods').textContent,
   populationComparison:populationControlHelp,
   cohortSelect:cohortControlHelp,
   stateMode:()=>el('analysisMessage').textContent,
   coverage:()=>el('analysisMessage').textContent+' The percentage selects the reference core or retained pure states; it does not refit sample coordinates.',
   sampleEmbedding:'Global and reference views keep fixed coordinates; Local 3D MDS uses the saved embedding for the selected sample set. Only supported views are available for each dataset.',
   scope:'Choose samples from the selected edge, all displayed states, or the full selected population.',
-  loadDataset:'Load a prepared dataset bundle JSON file. The bundle is validated before it becomes available in Dataset.',
   backSelection:'Return to the previous selection. History resets when state coverage changes.',
   forwardSelection:'Revisit the next selection after going Back.',
   clearSelection:'Clear the selected edge or vertex and return to all displayed states.',
@@ -692,7 +691,7 @@ function installControlHelp(){
   participantBackgroundSize:'Size of sample points, or background points in Participant mode. Each setting is remembered separately for this dataset.',
   participantBackgroundOpacity:'Opacity of sample points, or background points in Participant mode. 0% hides those points. Reference markers and selected visits are unchanged.'
  };
- for(const [copy,source] of [['panelDatasetSelect','datasetSelect'],['panelCohortSelect','cohortSelect'],['panelStateMode','stateMode'],['panelCoverage','coverage'],['panelSampleEmbedding','sampleEmbedding'],['panelLoadDataset','loadDataset'],['sampleBackSelection','backSelection'],['sampleForwardSelection','forwardSelection'],['sampleClearSelection','clearSelection']])explanations[copy]=explanations[source];
+ for(const [copy,source] of [['panelDatasetSelect','datasetSelect'],['panelCohortSelect','cohortSelect'],['panelStateMode','stateMode'],['panelCoverage','coverage'],['panelSampleEmbedding','sampleEmbedding'],['sampleBackSelection','backSelection'],['sampleForwardSelection','forwardSelection'],['sampleClearSelection','clearSelection']])explanations[copy]=explanations[source];
  const popup=el('participantHelpPopover');document.body?.appendChild(popup);let active=null,pinned=false;
  const close=()=>{if(popup.matches(':popover-open'))popup.hidePopover();active?.setAttribute('aria-expanded','false');active=null;pinned=false};
  const open=(trigger,text,pin=false)=>{

@@ -23,7 +23,7 @@ function updateDatasetChoices(){
  const catalogue=new Map(typeof VME_ASSETS==='undefined'?[]:Object.entries(VME_ASSETS.manifest.datasets).map(([id,x])=>[id,x]));
  for(const [id,b] of datasetRegistry)catalogue.set(id,b);
  const options=[...catalogue.values()].map(b=>`<option value="${esc(b.dataset.id)}">${esc(datasetDisplayTitle(b.dataset))}</option>`).join('')+
-  [...embeddingFamilyRegistry.values()].map(f=>`<option value="${esc(f.id)}">${esc(f.title)}</option>`).join('');
+  [...embeddingFamilyRegistry.values()].map(f=>`<option value="${esc(f.id)}">${esc(f.title)}</option>`).join('')+'<option value="">Load dataset bundle…</option>';
  for(const id of ['datasetSelect','panelDatasetSelect']){el(id).innerHTML=options;el(id).value=activeEmbeddingFamily?.id||META.id}
 }
 function datasetPresentation(coverage=META.defaultCoverage){
@@ -160,8 +160,14 @@ async function loadForSelection(task,revision,retry){
 }
 
 function datasetMessage(message){for(const id of ['datasetMessage','panelDatasetMessage'])el(id).textContent=message}
-for(const id of ['datasetSelect','panelDatasetSelect'])el(id).onchange=()=>switchDataset(el(id).value).catch(error=>{updateDatasetChoices();datasetMessage(error.message)});
-for(const id of ['loadDataset','panelLoadDataset'])el(id).onclick=()=>el('datasetFile').click();
+for(const id of ['datasetSelect','panelDatasetSelect'])el(id).onchange=()=>{
+ const value=el(id).value;
+ if(value===''){
+  // Restore both selectors before opening the picker, including when it is canceled.
+  updateDatasetChoices();el('datasetFile').value='';el('datasetFile').click();return;
+ }
+ return switchDataset(value).catch(error=>{updateDatasetChoices();datasetMessage(error.message)});
+};
 el('datasetFile').onchange=async()=>{
  const file=el('datasetFile').files?.[0];if(!file)return;
  datasetMessage('Validating '+file.name+'…');

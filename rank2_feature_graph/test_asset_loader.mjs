@@ -43,3 +43,25 @@ assert.equal(comparisonLoader.loaded.get('sensitivity').sensitivityComparisons.r
 const missing=await descriptor({sensitivityComparisons:{rebuilt:{display:{fitKeys:['absent']}}}});
 await assert.rejects(createLoader({version:1,datasets:{},sensitivity:{parts:[missing]}},request).prepareSensitivity({combDisplay:{fits:{}}}),/Missing sensitivity fit/);
 console.log('PASS: rebuilt startup fit resolution, baseline immutability, cached reuse and missing-fit rejection.');
+
+// Dataset import is the last menu action, never a dataset identity.
+{
+ const source=fs.readFileSync(new URL('datasets.js',import.meta.url),'utf8');
+ const nodes=new Map(),el=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:''});return nodes.get(id)};
+ let opened=0;const switches=[];
+ const c=vm.createContext({el,esc:String,datasetDisplayTitle:m=>m.title,datasetRegistry:new Map([['a',{dataset:{id:'a',title:'A'}}]]),embeddingFamilyRegistry:new Map([['family',{id:'family',title:'Neighborhoods'}]]),activeEmbeddingFamily:null,META:{id:'a'}});
+ c.switchDataset=async id=>{switches.push(id);if(id==='bad')throw Error('Could not load dataset');c.META.id=id;c.updateDatasetChoices()};
+ c.registerDataset=async b=>{c.datasetRegistry.set(b.dataset.id,b);await c.switchDataset(b.dataset.id)};
+ el('datasetFile').click=()=>{opened++;assert.equal(el('datasetSelect').value,c.activeEmbeddingFamily?.id||c.META.id);assert.equal(el('panelDatasetSelect').value,el('datasetSelect').value)};
+ vm.runInContext(source.slice(source.indexOf('function updateDatasetChoices('),source.indexOf('function datasetPresentation(')),c);
+ vm.runInContext(source.slice(source.indexOf('function datasetMessage('),source.indexOf('const initialDatasetView=')),c);
+ c.updateDatasetChoices();assert.match(el('datasetSelect').innerHTML,/<option value="">Load dataset bundle…<\/option>$/);
+ assert.equal(el('datasetSelect').innerHTML,el('panelDatasetSelect').innerHTML);
+ for(const id of ['datasetSelect','panelDatasetSelect']){el(id).value='';await el(id).onchange();el('datasetFile').files=[];await el('datasetFile').onchange()}
+ assert.equal(opened,2);assert.deepEqual(switches,[]);assert.equal(c.META.id,'a');
+ c.activeEmbeddingFamily={id:'family'};el('datasetSelect').value='';await el('datasetSelect').onchange();assert.equal(el('datasetSelect').value,'family');c.activeEmbeddingFamily=null;c.updateDatasetChoices();
+ el('datasetFile').files=[{name:'invalid.json',text:async()=>'{invalid'}];await el('datasetFile').onchange();assert.equal(c.META.id,'a');assert(el('datasetMessage').textContent);assert.equal(el('datasetFile').value,'');
+ el('datasetFile').files=[{name:'valid.json',text:async()=>JSON.stringify({dataset:{id:'b',title:'B'}})}];await el('datasetFile').onchange();assert.equal(c.META.id,'b');assert.equal(el('panelDatasetSelect').value,'b');assert.match(el('datasetSelect').innerHTML,/<option value="">Load dataset bundle…<\/option>$/);
+ el('panelDatasetSelect').value='bad';await el('panelDatasetSelect').onchange();assert.equal(el('panelDatasetSelect').value,'b');assert.equal(el('datasetMessage').textContent,'Could not load dataset');
+ console.log('PASS: import action last in both selectors; picker/cancel preserves dataset or neighborhood; invalid files and failed switches retain selection; successful import updates both menus.');
+}
