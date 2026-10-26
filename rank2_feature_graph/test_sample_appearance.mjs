@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const elements=new Map(),saved=new Map(),renders=[];
 const el=id=>{if(!elements.has(id))elements.set(id,{value:'',checked:false,disabled:false,hidden:false,textContent:'',options:[{},{},{}],parentElement:{setAttribute(){}},addEventListener(){},setAttribute(){}});return elements.get(id)};
-const context=vm.createContext({el,localStorage:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)},Plotly:{react:(id,traces,layout)=>{renders.push({id,traces,layout});return Promise.resolve()}},readCamera:()=>({eye:{x:1,y:2,z:3}}),pendingSampleCamera:null,refreshSamples:camera=>{context.lastCamera=camera;context.refreshCount=(context.refreshCount||0)+1},BUNDLE_PACK:{participants:{}},META:{id:'fixture'}});
+const context=vm.createContext({el,syncEmbeddingChoices:()=>{},localStorage:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)},Plotly:{react:(id,traces,layout)=>{renders.push({id,traces,layout});return Promise.resolve()}},readCamera:()=>({eye:{x:1,y:2,z:3}}),pendingSampleCamera:null,refreshSamples:camera=>{context.lastCamera=camera;context.refreshCount=(context.refreshCount||0)+1},BUNDLE_PACK:{participants:{}},META:{id:'fixture'}});
 const run=s=>vm.runInContext(s,context),plain=x=>JSON.parse(JSON.stringify(x));
 vm.runInContext(fs.readFileSync(new URL('participants.js',import.meta.url),'utf8'),context);
 run('installControlHelp=()=>{};syncParticipantControls=()=>syncSampleAppearanceControls();installParticipants()');

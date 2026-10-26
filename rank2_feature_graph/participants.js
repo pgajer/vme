@@ -544,6 +544,7 @@ function syncSampleAppearanceControls(referenceAvailable=true){
  el('participantArrowScale').disabled=!active||!participant.showLines||!participant.showArrows;
 }
 function renderSamplePlot(traces,layout,config){
+ syncEmbeddingChoices();
  if(!participant.active){
   const referenceLabel=a=>String(a.name||'').startsWith('endpoint-vertex:');
   const annotations=layout.scene?.annotations||[];

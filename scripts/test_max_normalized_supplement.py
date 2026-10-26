@@ -20,6 +20,30 @@ class SupplementTests(unittest.TestCase):
     def test_matching_population(self):
         validate(self.asset, self.rebuilt, 'b')
 
+    def add_local(self):
+        self.rebuilt['display'].update(merged={'60':{'pairs':[None,None,None,'1,2',None,None,None,'1,2']}},rank1={})
+        identity=digest([3,7]); contexts={k:identity for k in ('group:1,2','vertex:1','vertex:2')}
+        fits={}
+        for metric in ('euclidean','linf'):
+            fit=copy.deepcopy(self.asset['views']['maxnorm-'+metric])
+            fit.update(profiles=[3,7]); fit['solver'].update(seed=17,pivots=1)
+            fits[identity+':'+metric]=fit
+        local=dict(version=1,cohort='all',stateMode='merged',coverage='60',contexts=contexts,fits=fits)
+        local['revision']=digest(local)
+        self.asset['populationRevision']=self.asset['revision']; self.asset['localEmbeddings']=local
+        self.asset['revision']=digest({k:v for k,v in self.asset.items() if k!='revision'})
+
+    def test_local_membership_and_original_population_identity(self):
+        self.add_local(); validate(self.asset,self.rebuilt,'b')
+        for change in (lambda a:a['localEmbeddings']['contexts'].pop('vertex:2'),
+                       lambda a:a['localEmbeddings'].update(coverage='70'),
+                       lambda a:a.update(populationRevision='wrong'),
+                       lambda a:next(iter(a['localEmbeddings']['fits'].values()))['profiles'].reverse()):
+            bad=copy.deepcopy(self.asset);change(bad)
+            local=bad['localEmbeddings'];local['revision']=digest({k:v for k,v in local.items() if k!='revision'})
+            bad['revision']=digest({k:v for k,v in bad.items() if k!='revision'})
+            with self.assertRaises(ValueError):validate(bad,self.rebuilt,'b')
+
     def test_reject_wrong_population_and_coordinates(self):
         for change in (lambda a: a.update(sensitivityRevision='other'),
                        lambda a: a.update(recordMappingSha256='other'),

@@ -28,8 +28,8 @@ function samplePanelTitle(method,selection='',cohortOverride=null){
 }
 function sampleEmbeddingTitle(overview=false){
  const mode=el('sampleEmbedding').value;
- if(mode==='maxnorm-euclidean')return 'Max-normalized Euclidean 3D MDS';
- if(mode==='maxnorm-linf')return 'Max-normalized L∞ 3D MDS';
+ if(mode.startsWith('maxnorm-euclidean'))return 'Max-normalized Euclidean · '+(maxNormalizedIsLocal()?'Local':'Population')+' 3D MDS';
+ if(mode.startsWith('maxnorm-linf'))return 'Max-normalized L∞ · '+(maxNormalizedIsLocal()?'Local':'Population')+' 3D MDS';
  if(mode==='reference')return standardSampleEmbeddingTitle('Reference 3D MDS');
  if(!overview)return standardSampleEmbeddingTitle(mode==='local'?'Local 3D MDS':'Global 3D MDS');
  if(META.id==='comb-V3V4-tx'&&DATA.records)return standardSampleEmbeddingTitle('Population 3D MDS');
@@ -91,6 +91,7 @@ function materializeAnalysis(bundle,cohort,mode,q){
 }
 async function changeAnalysis(cohort=activeCohort,mode=activeStateMode,q=el('coverage').value){
  if(activeEmbeddingFamily)cohort='all';
+ const rememberedMethod=maxNormalizedIds.includes(el('sampleEmbedding').value)?maxNormalizedMethod():null;
  const revision=++datasetSwitchRevision,bundle=datasetRegistry.get(activeEmbeddingFamily?familySelection.collection:META.id);
  cohort=canonicalDisplayCohort(bundle,cohort);
  await Promise.all([queue,graphQueue]);if(revision!==datasetSwitchRevision)return;
@@ -100,7 +101,9 @@ async function changeAnalysis(cohort=activeCohort,mode=activeStateMode,q=el('cov
  if(activeEmbeddingFamily)familyGraphReady=true;
  if(recordExtension(bundle))el('participantCohort').value=recordExtension(bundle).populations[cohort]&&cohort!=='records'?cohort:'both';
  const neighborhoodCamera=activeEmbeddingFamily?familyCamera():null;
- resetDatasetSelection();datasetPresentation(q);historyCoverage=q;draw(activeEmbeddingFamily?null:defaultCamera);
+ resetDatasetSelection();datasetPresentation(q);
+ if(rememberedMethod&&maxNormalizedAsset()){el('sampleEmbedding').value=rememberedMethod;preferredSampleEmbedding=rememberedMethod}
+ historyCoverage=q;draw(activeEmbeddingFamily?null:defaultCamera);
  if(typeof saveDatasetNavigation==='function')saveDatasetNavigation();
  await Promise.all([queue,graphQueue]);
  if(activeEmbeddingFamily){syncFamilySelectors();await renderFamily(neighborhoodCamera)}

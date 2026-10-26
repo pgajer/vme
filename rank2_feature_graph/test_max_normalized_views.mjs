@@ -35,7 +35,7 @@ assert.throws(()=>run('maxNormalizedCoordinates()'),/do not cover/);
 // The ordinary overview must retain a selected new metric through selectionControls.
 const html=fs.readFileSync(new URL('viewer.html',import.meta.url),'utf8');
 run(html.slice(html.indexOf('function selectionControls(){'),html.indexOf('function inspectBase(){')));
-run(`DATA={referenceCoords:[]}; const hasSelection=()=>false,localSelectionFit=()=>null,syncSampleSelectors=()=>{}; const selectionHistory=[],selectionFuture=[];`);
+run(`DATA={referenceCoords:[]}; let hasSelection=()=>false; const localSelectionFit=()=>null,syncSampleSelectors=()=>{}; const selectionHistory=[],selectionFuture=[];`);
 run('selectionControls()');assert.equal(el('sampleEmbedding').value,'maxnorm-linf');
 run(html.slice(html.indexOf('function viewCoordinates(){'),html.indexOf('function selectionReferences(')));
 run("DATA={records:[{profile:7},{profile:3}],referenceCoords:[[99,99,99],[99,99,99]],samples:{coords:[]}}");
@@ -45,3 +45,40 @@ run("const savedView={dataset:'comb-V3V4-tx',datasetRevision:'base',populationCo
 assert.throws(()=>run("validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'old'})"),/matching rebuilt-reference/);
 assert.throws(()=>run("validateMaxNormalizedNamedView({...savedView,populationComparison:'baseline'})"),/matching rebuilt-reference/);
 console.log('Max-normalized view tests passed: identity mapping, metrics, evaluation scope, availability, selection persistence.');
+
+// Public method/scope controls preserve old routes and gate local supplements.
+for(const id of ['sampleMethod','panelSampleMethod'])el(id).options=['l1-euclidean','maxnorm-euclidean','maxnorm-linf'].map(value=>({value}));
+for(const id of ['sampleFitScope','panelSampleFitScope'])el(id).options=['population','cohort','local','subject'].map(value=>({value}));
+run(`let activeCohort='all',activeStateMode='merged',selected=null,selectedVertex=null;
+ hasSelection=()=>selected!==null||selectedVertex!==null;
+ const eligibleIndices=()=>[0,1],incidentEdges=()=>[{id:'3,7'}];
+ DATA={records:[{profile:7},{profile:3}],samples:{ids:['a','b'],pair:['3,7','3,7']},
+ referenceCoords:[[1,1,1],[2,2,2]],localEmbeddings:{'3,7':{coords:[[1,0,0],[2,0,0]]}},vertexEmbeddings:{fits:{},mapping:{}}};
+ BUNDLE_PACK.maxNormalizedEmbeddings.populationRevision='previous';
+ BUNDLE_PACK.maxNormalizedEmbeddings.localEmbeddings={version:1,revision:'locals',cohort:'all',stateMode:'merged',coverage:'60',contexts:{'group:3,7':'members','vertex:3':'members'},fits:{
+ 'members:linf':{profiles:[3,7],coordinates:[[4,0,0],[5,0,0]],metric:'linf',evaluation:{relativeRms:.1,pairs:1,zeroPairs:0,profiles:2,sampled:false},solver:{seed:17,pivots:1,starts:1,epochs:200},validation:{globalRestrictionRms:.2}}}};
+ el('coverage').value='60';el('sampleEmbedding').value='overview';syncEmbeddingChoices();`);
+assert.equal(el('sampleMethod').value,'l1-euclidean');assert.equal(el('sampleFitScope').value,'population');
+assert.equal(el('sampleFitScope').disabled,true);assert.equal(el('sampleFitScope').options[1].hidden,true);
+run("selected='3,7';el('sampleEmbedding').value='local';syncEmbeddingChoices()");
+assert.equal(el('sampleFitScope').value,'local');assert.equal(el('sampleFitScope').disabled,false);
+let changes=0;el('sampleEmbedding').onchange=()=>{changes++};
+run("installEmbeddingChoices();changeEmbeddingChoice('maxnorm-linf','local');syncEmbeddingChoices()");
+assert.equal(el('sampleEmbedding').value,'maxnorm-linf-local');assert.equal(el('sampleMethod').value,'maxnorm-linf');
+assert.equal(run('sampleUsesLocalFit()'),true);assert.equal(JSON.stringify(run('maxNormalizedLocalFit().coords')),'[[5,0,0],[4,0,0]]');
+assert.equal(run('maxNormalizedLocalView().metric'),'linf');
+run("changeEmbeddingChoice('maxnorm-euclidean','local');syncEmbeddingChoices()");
+assert.equal(el('sampleEmbedding').value,'maxnorm-euclidean','Missing local metric must fall back to its population view');
+assert.equal(el('sampleFitScope').options[2].disabled,true);
+run("el('sampleEmbedding').value='maxnorm-linf-local';el('coverage').value='70';syncMaxNormalizedControls();syncEmbeddingChoices()");
+assert.equal(el('sampleEmbedding').value,'maxnorm-linf');assert.equal(el('sampleFitScope').options[2].disabled,true);
+run("activeCohort='cohort1';el('sampleEmbedding').value='global';syncEmbeddingChoices()");
+assert.equal(el('sampleFitScope').value,'cohort');assert.equal(el('sampleFitScope').options[1].hidden,false);
+run("changeEmbeddingChoice('l1-euclidean','population')");assert.equal(el('sampleEmbedding').value,'reference');
+run("participant.active=true;participant.embeddingMode='union';syncEmbeddingChoices()");
+assert.equal(el('sampleMethod').disabled,true);assert.equal(el('sampleFitScope').disabled,true);assert.equal(el('sampleFitScope').value,'subject');
+run("participant.active=false;activeCohort='all';el('coverage').value='60';validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'previous'})");
+run("validateMaxNormalizedNamedView({...savedView,maxNormalizedRevision:'previous',maxNormalizedLocalRevision:'locals',cohort:'all',stateMode:'merged',coverage:'60',selection:{...savedView.selection,embedding:'maxnorm-linf-local',selected:'3,7'}})");
+assert.throws(()=>run("validateMaxNormalizedNamedView({...savedView,maxNormalizedLocalRevision:'wrong',selection:{...savedView.selection,embedding:'maxnorm-linf-local'}})"),/local embedding/);
+assert.ok(changes>=3);
+console.log('Method/scope controls passed: mirrored controls, local membership, unavailable combinations, cohort scopes and old saved-view compatibility.');

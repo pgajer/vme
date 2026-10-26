@@ -148,9 +148,17 @@ python3 scripts/portable.py update --metadata /path/to/VME-metadata-maxnorm.json
 ```
 
 Later `python3 scripts/portable.py update` calls remember that file. The original
-views remain available. Both new views use fixed full-population coordinates;
-cohort, state and vertex selections restrict those coordinates without fitting
-a local embedding. Reference diamonds use the same coordinate system. Participant
+views remain available. **Sample embedding** selects the normalization and distance
+metric; **Fitting scope** separately selects the saved population or local fit.
+Population coordinates stay fixed when filtering samples.
+
+A supplement containing local fits also enables **Local selection** for both
+max-normalized methods: Rebuilt reference, All cohorts, Merged groups, 60% coverage,
+with a CST group or vertex selected. These are independent fits of the entire
+selected group or incident-state union. Other cohorts and coverage settings retain
+population views; local scope is disabled where no matching fit is installed.
+Local reference diamonds mark observed phylotype maxima within the fitted selection.
+Participant
 joint views, top-3 geometry and pure-state comparison tools retain their existing
 embeddings. The graph layout and state assignments do not change.
 

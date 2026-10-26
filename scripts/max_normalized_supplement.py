@@ -53,6 +53,47 @@ def validate(asset, rebuilt, base_revision):
                 or not math.isfinite(evaluation['relativeRms']) or evaluation['relativeRms'] < 0
                 or solver['backend'] != 'sgd' or solver['epochs'] <= 0 or solver['starts'] != 1):
             raise ValueError('Invalid max-normalized evaluation or solver metadata')
+    local = asset.get('localEmbeddings')
+    if local:
+        population_content = {k: v for k, v in asset.items() if k not in ('revision', 'populationRevision', 'localEmbeddings')}
+        if asset.get('populationRevision') != digest(population_content):
+            raise ValueError('Original population embedding identity differs')
+        if (local.get('version') != 1 or local.get('cohort') != 'all'
+                or local.get('stateMode') != 'merged' or local.get('coverage') != '60'
+                or local.get('revision') != digest({k:v for k,v in local.items() if k != 'revision'})):
+            raise ValueError('Invalid local embedding scope or checksum')
+        groups = {}
+        for record in records:
+            key = display['merged']['60']['pairs'][record['profile']]
+            if key not in display['rank1']:
+                groups.setdefault(key, set()).add(record['profile'])
+        vertices = {}
+        for key, members in groups.items():
+            for vertex in key.split(','):
+                vertices.setdefault(vertex, set()).update(members)
+        expected = {kind+':'+key:sorted(members) for kind, values in [('group',groups),('vertex',vertices)] for key,members in values.items()}
+        if set(local['contexts']) != set(expected):
+            raise ValueError('Local embedding selection catalogue differs')
+        expected_fits = set()
+        for key, members in expected.items():
+            identity = digest(members)
+            if local['contexts'][key] != identity:
+                raise ValueError('Local embedding membership identity differs')
+            for metric in ('euclidean','linf'):
+                fit_key = identity+':'+metric; expected_fits.add(fit_key)
+                fit = local['fits'][fit_key]; coords = fit['coordinates']; e = fit['evaluation']; solver = fit['solver']
+                if (fit['profiles'] != members or fit['metric'] != metric or len(coords) != len(members)
+                        or any(len(row)!=3 or any(not isinstance(v,(int,float)) or not math.isfinite(v) for v in row) for row in coords)
+                        or fit['coordinateSha256'] != digest(coords)):
+                    raise ValueError('Local embedding coordinates or profiles differ')
+                pairs = len(members)*(len(members)-1)//2
+                if (e['profiles'] != len(members) or e['zeroPairs'] != 0 or not 0 < e['pairs'] <= pairs
+                        or e['sampled'] != (e['pairs'] < pairs) or not math.isfinite(e['relativeRms']) or e['relativeRms'] < 0
+                        or solver['backend'] != 'sgd' or solver['starts'] != 1 or solver['epochs'] <= 0
+                        or solver['seed'] not in (17,29) or not 0 < solver['pivots'] < len(members)):
+                    raise ValueError('Invalid local embedding evaluation or solver metadata')
+        if set(local['fits']) != expected_fits:
+            raise ValueError('Unexpected local embedding fits')
     content = {k: v for k, v in asset.items() if k != 'revision'}
     if asset['revision'] != digest(content):
         raise ValueError('Max-normalized supplement checksum differs')

@@ -36,11 +36,11 @@ console.log('PASS: analytic RMSRE, display scaling, target metrics, reproducible
 // Titles distinguish abundance normalization from target-distance construction.
 const titleSource=fs.readFileSync('rank2_feature_graph/cohort_views.js','utf8');
 vm.runInContext(titleSource.slice(titleSource.indexOf('function standardSampleEmbeddingTitle('),titleSource.indexOf('function syncAnalysisControls(')),c);
-Object.assign(c,{META:{id:'comb-V3V4-tx'},DATA:{records:[{}]},activeCohort:'all',activeSensitivityMode:'rebuilt'});
+Object.assign(c,{META:{id:'comb-V3V4-tx'},DATA:{records:[{}]},activeCohort:'all',activeSensitivityMode:'rebuilt',maxNormalizedIsLocal:()=>el('sampleEmbedding').value.endsWith('-local')});
 el('sampleEmbedding').value='overview';
 assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts · Rebuilt reference · Sum-normalized Euclidean · Population 3D MDS');
 for(const mode of ['local','global','reference']){el('sampleEmbedding').value=mode;assert.match(c.sampleEmbeddingTitle(),/^Sum-normalized Euclidean · /)}
-for(const [mode,metric] of [['maxnorm-euclidean','Euclidean'],['maxnorm-linf','L∞']]){el('sampleEmbedding').value=mode;assert.equal(c.sampleEmbeddingTitle(),'Max-normalized '+metric+' 3D MDS')}
+for(const [mode,metric] of [['maxnorm-euclidean','Euclidean'],['maxnorm-linf','L∞']])for(const [suffix,scope] of [['','Population'],['-local','Local']]){el('sampleEmbedding').value=mode+suffix;assert.equal(c.sampleEmbeddingTitle(),'Max-normalized '+metric+' · '+scope+' 3D MDS')}
 c.META.id='unreviewed-import';assert.match(c.standardSampleEmbeddingTitle('Saved embedding'),/^Normalization\/metric unspecified/);
 const familySource=fs.readFileSync('rank2_feature_graph/embedding_families.js','utf8');
 vm.runInContext(familySource.slice(0,familySource.indexOf('// Generic, versioned')),c);
