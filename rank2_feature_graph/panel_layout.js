@@ -151,7 +151,7 @@ var selectionPanelLayoutSync=null;
  }
  // Sidebar state is separate from panel sizing and scientific view selections.
  const shell=document.getElementById('explorerLayout'),toggle=document.getElementById('toggleControls'),controls=document.getElementById('controlSections');
- const sidebarKey='udcst-explorer-controls-v1',sectionIds=['dataControls','stateControls','sampleControls','navigationControls','layoutControls'];
+ const sidebarKey='udcst-explorer-controls-v1',sectionIds=['dataControls','stateControls','sampleControls','layoutControls'];
  let collapsed=false;
  try{
   const saved=JSON.parse((typeof datasetPanelStorage==='undefined'?localStorage:datasetPanelStorage).getItem(sidebarKey)||'null');
@@ -186,8 +186,11 @@ var selectionPanelLayoutSync=null;
   maximized=restoring?null:panel;
   // Move the existing controls so selection, handlers and disclosure state stay shared.
   const participantSection=document.getElementById('participantSection');
-  const navigation=document.getElementById(maximized?.id==='samplePanel'?'panelNavigationControls':'navigationControls');
-  if(participantSection.parentElement!==navigation.parentElement)navigation.parentElement.insertBefore(participantSection,navigation);
+  const participantHost=document.getElementById(maximized?.id==='samplePanel'?'sampleNavigation':'controlSections');
+  if(participantSection.parentElement!==participantHost){
+   if(maximized?.id==='samplePanel')participantHost.appendChild(participantSection);
+   else participantHost.insertBefore(participantSection,document.getElementById('layoutControls'));
+  }
   if(typeof moveValenciaControls==='function')moveValenciaControls();
   const datasetLabel=document.getElementById(maximized?.id==='samplePanel'?'panelDatasetSelect':'datasetSelect').closest('label');
   datasetLabel.after(document.getElementById('populationComparisonControl'));
