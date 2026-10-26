@@ -660,7 +660,7 @@ async function participantSamples(){
 function installControlHelp(){
  const explanations={
   datasetSelect:'Select the dataset to explore. Dataset-specific cohorts, states and participants update together.',
-  cohortSelect:'Choose the population within the current dataset. Reference assignments and saved embeddings are retained.',
+  cohortSelect:cohortControlHelp,
   stateMode:()=>el('analysisMessage').textContent,
   coverage:()=>el('analysisMessage').textContent+' The percentage selects the reference core or retained pure states; it does not refit sample coordinates.',
   sampleEmbedding:'Global and reference views keep fixed coordinates; Local 3D MDS uses the saved embedding for the selected sample set. Only supported views are available for each dataset.',

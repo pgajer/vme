@@ -2,12 +2,21 @@
 function analysisExtension(){return datasetRegistry.get(META.id)?.cohortAnalysis}
 function eligibleIndices(){return DATA.eligibleIndices||DATA.samples.ids.map((_,i)=>i)}
 function populationSize(){return DATA.eligibleIndices?.length??DATA.samples.ids.length}
+function cohortChoiceLabel(title){
+ return title==='Reference-matched abundance ≥90% — sensitivity'?'All cohorts · ≥90% reference-matched abundance':title;
+}
+function cohortControlHelp(){
+ const base='Choose the population within the current dataset. Reference assignments and saved embeddings are retained.';
+ return META.id==='comb-V3V4-tx'&&typeof activeSensitivityMode!=='undefined'&&activeSensitivityMode!=='baseline'
+  ? 'All cohorts combines the retained samples from every cohort. Each sample has at least 90% of its total abundance mapped to taxa in the VALENCIA2 reference. This retains 24,465 of 25,013 sample records; 548 are omitted. It is a reference-coverage filter, not CST classification confidence, sequencing depth, or proof of vaginal origin. Retained samples keep their full compositions, including unmatched taxa. Choosing an individual cohort restricts this same filtered population.'
+  : base;
+}
 function syncAnalysisControls(){
  const a=analysisExtension(),records=recordExtension();
  el('explorerDescription').textContent=activeStateMode==='merged'?'Vertices are features; edges name reference core groups. Merged groups retain every selected record. Select an edge or vertex to inspect samples; clear the selection for the overview.':'Vertices are features; edges group samples by their unordered leading pair. Coverage selects retained states. Select an edge or vertex to inspect samples; clear the selection for the overview.';
  const choices=a?Object.keys(a.populations).filter(c=>!a.eligibility||c!=='records'):records?['all',...Object.keys(records.populations)]:['all'];
  for(const id of ['cohortSelect','panelCohortSelect']){
-  el(id).innerHTML=choices.map(c=>`<option value="${esc(c)}">${esc(a?(c==='all'&&activeStateMode==='pure'&&a.combDisplay&&!a.eligibility?'Frozen distinct-profile view':a.populations[c].title):records?(c==='all'?'Frozen distinct-profile view':records.populations[c].title):'Full combined reference')}</option>`).join('');el(id).value=activeCohort;el(id).disabled=!a&&!records;
+  el(id).innerHTML=choices.map(c=>`<option value="${esc(c)}">${esc(a?(c==='all'&&activeStateMode==='pure'&&a.combDisplay&&!a.eligibility?'Frozen distinct-profile view':cohortChoiceLabel(a.populations[c].title)):records?(c==='all'?'Frozen distinct-profile view':cohortChoiceLabel(records.populations[c].title)):'Full combined reference')}</option>`).join('');el(id).value=activeCohort;el(id).disabled=!a&&!records;el(id).title=cohortControlHelp();
  }
  for(const id of ['stateMode','panelStateMode']){el(id).value=activeStateMode;el(id).disabled=!a}
  for(const id of ['coverageLabel','panelCoverageLabel'])el(id).textContent=activeStateMode==='merged'?'Reference core target':'Reference state coverage';
