@@ -16,6 +16,18 @@ const subset={nodes:graph.nodes.slice(2),edges:[graph.edges[2]]};
 assert.equal(c.graphEdgeWidthGroups(subset,()=>false)[0].width,1.5,'Filtering must not rescale a rare state');
 const byEdge=traces=>new Map(traces.flatMap(t=>[...new Set(t.customdata.filter(Boolean))].map(id=>[id,{width:t.line.width,coords:t.x.map((x,i)=>[x,t.y[i],t.z[i]]).filter((_,i)=>t.customdata[i]===id)}])));
 const initial=byEdge(c.graphEdgeTraces(graph,lookup));
+assert.deepEqual(plain(c.graphColorSettings()),{vertex:'#d62728',edge:'#82a9b9'});
+c.restoreGraphColorSettings({vertex:'#AA2233',edge:'#2244AA'});
+assert.deepEqual(plain(c.graphColorSettings()),{vertex:'#aa2233',edge:'#2244aa'});
+assert.equal(c.graphVertexColor(),'#aa2233');assert.equal(c.graphVertexColor(true),'#cf6b21');
+assert.equal(c.graphEdgeColor(true),'#cf6b21');
+const recolored=c.graphEdgeTraces(graph,lookup);
+assert(recolored.every(t=>t.line.color==='#2244aa'));
+for(const [id,old] of initial){assert.deepEqual(byEdge(recolored).get(id).coords,old.coords);assert.equal(byEdge(recolored).get(id).width,old.width)}
+el('graphFadeBySize').checked=true;assert(c.graphEdgeTraces(graph,lookup).every(t=>t.line.color.filter(Boolean).every(color=>color==='#2244aa'||color.startsWith('rgba(34,68,170,'))));el('graphFadeBySize').checked=false;
+for(const bad of [null,'red','#123','garbage',{}]){c.restoreGraphColorSettings({vertex:bad,edge:bad});assert.deepEqual(plain(c.graphColorSettings()),{vertex:'#d62728',edge:'#82a9b9'})}
+c.restoreGraphColorSettings();assert.deepEqual(plain(c.graphColorSettings()),{vertex:'#d62728',edge:'#82a9b9'});
+
 for(const [strength,widths] of [[.05,[6,5.5,5]],[.5,[6,3.5,1.5]],[1,[6,2.5,1]],[2,[6,1.5,1]]]){
  c.restoreGraphWidthSettings({scaled:true,maximum:6,strength});
  assert.deepEqual(graph.edges.map(e=>c.graphEdgeWidth(e)),widths,'Strength changes size contrast, retaining the maximum and minimum');

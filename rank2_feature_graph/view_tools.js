@@ -145,6 +145,14 @@ function graphEdgeWidthGroups(g,classify){
  }
  return [...groups.values()].sort((a,b)=>Number(a.active)-Number(b.active)||a.width-b.width);
 }
+function validGraphColor(value){return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)}
+function graphColorSettings(){return {vertex:validGraphColor(el('graphVertexColor')?.value)?el('graphVertexColor').value.toLowerCase():'#d62728',edge:validGraphColor(el('graphEdgeColor')?.value)?el('graphEdgeColor').value.toLowerCase():'#82a9b9'}}
+function restoreGraphColorSettings(settings){
+ if(el('graphVertexColor'))el('graphVertexColor').value=validGraphColor(settings?.vertex)?settings.vertex.toLowerCase():'#d62728';
+ if(el('graphEdgeColor'))el('graphEdgeColor').value=validGraphColor(settings?.edge)?settings.edge.toLowerCase():'#82a9b9';
+}
+function graphVertexColor(active=false){return active?'#cf6b21':graphColorSettings().vertex}
+function graphEdgeColor(active=false){return active?'#cf6b21':graphColorSettings().edge}
 // Normalize against the full current reference, so selecting a subgraph does
 // not turn a rare state opaque. Degree and incident support use displayed edges.
 function graphFadeStyle(g,reference=current(),enabled=el('graphFadeBySize')?.checked===true,strength=graphFadeStrength()){
@@ -166,7 +174,7 @@ function graphColorOpacity(color,opacity){
 function graphEdgeTraces(g,lookup,project=null){
  const degrees=graphNodeDegrees(g),fade=graphFadeStyle(g);
  return graphEdgeWidthGroups(g,activeEdge).map(({active,width,edges})=>{
-  const pts=[],ids=[],text=[],colors=[],base=active?'#cf6b21':'#82a9b9';
+  const pts=[],ids=[],text=[],colors=[],base=graphEdgeColor(active);
   for(const e of edges){
    const a=lookup.get(e.from),b=lookup.get(e.to),ends=project?clippedSegment(a,b,project,graphNodeSize(degrees.get(e.from))+5,graphNodeSize(degrees.get(e.to))+5):[a,b];if(!ends)continue;
    const steps=g.edges.length>100?2:9,color=graphColorOpacity(base,fade.edge(e));

@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 13 · reviewed 26 October 2026.
+Specification version 14 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -73,6 +73,21 @@ The original-pair component controls still describe membership within a selected
 merged group. Their color pickers edit the shared pair palette; select Pure
 2-CSTs to see those component colors in the sample view. Cohort and VALENCIA2
 colors do not redefine graph state colors or assignments.
+
+## Graph vertex and edge colors
+
+The graph sidebar has **Vertices** and **Edges** color pickers. The common
+vertex color defaults to red (`#d62728`), and the common edge color retains
+its blue default (`#82a9b9`). These base colors apply in 2D and 3D, including
+exports. **Reset colors** restores these defaults for the current dataset.
+Settings persist per dataset and in named views; older settings without graph
+colors use the new defaults.
+
+Orange selection highlights remain in place. Participant density edges retain
+their yellow-to-red scale, and non-subject edges remain gray. Vertex labels,
+3D sample colors and top-3 face colors retain their separate meanings. Fading
+still adjusts opacity. Changing graph colors preserves coordinates, widths,
+selection, counts and sample colors.
 
 ## Graph edge thickness
 
