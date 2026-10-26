@@ -32,3 +32,20 @@ c.BUNDLE_PACK.stressCompositions.test.datasetRevision='rev';c.renderSampleStress
 c.renderFamilyStress({size:2000},{metric:'hellinger',construction:'Complete Fermat',power:'2',solver:{stress:.01,metadata:{target_normalized_rmse:.02}}},[]);assert.equal(el('familyStress').textContent,'RMS relative error: unavailable');
 c.renderFamilyStress({size:2000},{metric:'hellinger',construction:'Symmetric kNN + MST',distanceEvaluation:{relativeRms:.25,pairs:2016,seed:20261024}},[]);assert.equal(el('familyStress').textContent,'RMS relative error: 25.00% (sampled)');
 console.log('PASS: analytic RMSRE, display scaling, target metrics, reproducible unique pairs, zero distances, immutable inputs, displayed-profile deduplication, reference exclusion, missing inputs and metric separation.');
+
+// Titles distinguish abundance normalization from target-distance construction.
+const titleSource=fs.readFileSync('rank2_feature_graph/cohort_views.js','utf8');
+vm.runInContext(titleSource.slice(titleSource.indexOf('function standardSampleEmbeddingTitle('),titleSource.indexOf('function syncAnalysisControls(')),c);
+Object.assign(c,{META:{id:'comb-V3V4-tx'},DATA:{records:[{}]},activeCohort:'all',activeSensitivityMode:'rebuilt'});
+el('sampleEmbedding').value='overview';
+assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts · Rebuilt reference · Sum-normalized Euclidean · Population 3D MDS');
+for(const mode of ['local','global','reference']){el('sampleEmbedding').value=mode;assert.match(c.sampleEmbeddingTitle(),/^Sum-normalized Euclidean · /)}
+for(const [mode,metric] of [['maxnorm-euclidean','Euclidean'],['maxnorm-linf','L∞']]){el('sampleEmbedding').value=mode;assert.equal(c.sampleEmbeddingTitle(),'Max-normalized '+metric+' 3D MDS')}
+c.META.id='unreviewed-import';assert.match(c.standardSampleEmbeddingTitle('Saved embedding'),/^Normalization\/metric unspecified/);
+const familySource=fs.readFileSync('rank2_feature_graph/embedding_families.js','utf8');
+vm.runInContext(familySource.slice(0,familySource.indexOf('// Generic, versioned')),c);
+assert.equal(c.familyEmbeddingTitle({metric:'hellinger',construction:'Complete Fermat',power:2},'Li'),'Sum-normalized Hellinger · Fermat p=2 · 3D MDS');
+assert.equal(c.familyEmbeddingTitle({metric:'ratio_euclidean',construction:'PCA projection'},'Lc'),'Lc-normalized Euclidean · 3D PCA');
+assert.equal(c.familyEmbeddingTitle({metric:'sqrt_ratio_euclidean',construction:'Symmetric kNN + MST'},'Li'),'Square-root Li-normalized Euclidean · kNN + MST shortest paths · 3D MDS');
+assert.equal(c.familyEmbeddingTitle({metric:'jensen_shannon',construction:'Complete Fermat',power:1},'Li'),'Sum-normalized Jensen–Shannon · Fermat p=1 · 3D MDS');
+console.log('PASS: normalization and target metrics in sample and neighborhood titles; max-normalized views stay distinct; undocumented imports remain explicit.');

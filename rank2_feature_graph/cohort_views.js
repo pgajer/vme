@@ -11,6 +11,12 @@ function cohortControlHelp(){
   ? 'All includes every cohort within the selected Population. Choosing an individual cohort restricts that same population. Fixed reference and Rebuilt reference both retain samples with at least 90% VALENCIA2 reference-matched abundance; see Population for the filter and reference definitions.'
   : base;
 }
+// These released sample fits target full, sum-normalized relative abundances.
+// Imported datasets need their own provenance; never infer their geometry from a name.
+function standardSampleEmbeddingTitle(method){
+ const known=['comb-V3V4-tx','comb-V4-tx','umb-hmp-2019-panel','lsvf-v3v4-20241111','hmp-u01-2019','papclear-v3v4-provisional-20261017','zapps-pressmat-v4'].includes(META.id);
+ return (known?'Sum-normalized Euclidean':'Normalization/metric unspecified')+' · '+method;
+}
 function samplePanelTitle(method,selection='',cohortOverride=null){
  const key=typeof activeCohort==='undefined'?'all':activeCohort;
  const a=typeof analysisExtension==='function'?analysisExtension():null;
@@ -24,12 +30,12 @@ function sampleEmbeddingTitle(overview=false){
  const mode=el('sampleEmbedding').value;
  if(mode==='maxnorm-euclidean')return 'Max-normalized Euclidean 3D MDS';
  if(mode==='maxnorm-linf')return 'Max-normalized L∞ 3D MDS';
- if(mode==='reference')return 'Reference 3D embedding';
- if(!overview)return mode==='local'?'Local 3D MDS':'Global 3D embedding';
- if(META.id==='comb-V3V4-tx'&&DATA.records)return 'Population 3D MDS';
+ if(mode==='reference')return standardSampleEmbeddingTitle('Reference 3D MDS');
+ if(!overview)return standardSampleEmbeddingTitle(mode==='local'?'Local 3D MDS':'Global 3D MDS');
+ if(META.id==='comb-V3V4-tx'&&DATA.records)return standardSampleEmbeddingTitle('Population 3D MDS');
  let method=META.overviewLabel||'Saved 3D embedding';
  for(const separator of [' · ',' — '])if(META.populationName&&method.startsWith(META.populationName+separator))method=method.slice(META.populationName.length+separator.length);
- return method;
+ return standardSampleEmbeddingTitle(method);
 }
 function syncAnalysisControls(){
  const a=analysisExtension(),records=recordExtension();

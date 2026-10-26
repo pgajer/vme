@@ -1,3 +1,18 @@
+function familyEmbeddingTitle(view,anchor){
+ const geometry={
+  abundance_euclidean:'Sum-normalized Euclidean',
+  'abundance Euclidean':'Sum-normalized Euclidean',
+  hellinger:'Sum-normalized Hellinger',
+  jensen_shannon:'Sum-normalized Jensen–Shannon',
+  ratio_euclidean:anchor+'-normalized Euclidean',
+  sqrt_ratio_euclidean:'Square-root '+anchor+'-normalized Euclidean'
+ }[view.metric]||'Normalization/metric unspecified';
+ const construction=view.construction==='Complete Fermat'?'Fermat p='+view.power+' · 3D MDS'
+  :view.construction==='Symmetric kNN + MST'?'kNN + MST shortest paths · 3D MDS'
+  :view.construction==='PCA projection'?'3D PCA'
+  :view.construction==='direct Euclidean targets'?'3D MDS':view.construction;
+ return geometry+' · '+construction;
+}
 // Generic, versioned embedding collections share VME's dataset selector and Plotly runtime.
 // They do not masquerade as rank-2 bundles or invent state/participant capabilities.
 const embeddingFamilyRegistry=new Map((BUNDLE_PACK.embeddingFamilies||[]).map(f=>[f.id,f]));
@@ -380,7 +395,7 @@ function renderFamily(camera=null){
   const anchorLabel=family.anchors.find(a=>a.id===hood.anchor)?.label||hood.anchor;
   el('familyColorLegend').innerHTML=color.mode==='abundance'&&!graphColorOverride?`<p>${esc(anchorLabel)} relative abundance</p><div class="familyAbundanceScale" role="img" aria-label="${esc(anchorLabel)} relative abundance: 0% (purple) to 100% (yellow)" style="background:${familyAbundanceGradient()}"></div><div class="familyAbundanceTicks" aria-hidden="true">${[0,25,50,75,100].map(v=>`<span>${v}%</span>`).join('')}</div><small>Whole-composition abundance · fixed 0–100% range.</small>`:countedFamilyLegend(hood,color,foreground,background,linked.active&&showBackground,graphColorOverride,linked);
   renderFamilyStress(hood,view,xyz);
-  el('familyTitle').textContent=`${hood.anchor} · ${hood.collection} · ${hood.size/1000}k compositions`;
+  el('familyTitle').textContent=`${hood.anchor} · ${hood.collection} · ${hood.size/1000}k compositions · ${familyEmbeddingTitle(view,hood.anchor)}`;
   el('familySummary').textContent=`${hood.size.toLocaleString()} distinct compositions · ${hood.sourceRecords.toLocaleString()} source records · ${hood.views.length} saved embedding${hood.views.length===1?'':'s'}. Minimum ${hood.anchor} abundance: ${(Math.min(...hood.abundance)*100).toPrecision(5)}%. ${hood.nonDominant.toLocaleString()} compositions are dominated by another taxon.`;
   el('familyCaveats').textContent=family.limitations+(view.evaluation?' V4 fits are exploratory: a separate 64-query diagnostic per neighborhood found 33–69% mean retention of original-space ten-nearest neighbors after PCA-based neighbor search. This is a preparation diagnostic, not a measure of 3D embedding neighbor retention. No pivot-count or epoch-budget sensitivity study was performed.':'');
   const solver=view.solver,md=solver.metadata;
