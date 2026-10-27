@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 21 · reviewed 27 October 2026.
+Specification version 22 · reviewed 27 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -127,6 +127,20 @@ lighting; 2D vector exports preserve the gradients. Existing dataset settings
 receive a one-time migration to spheres, preserving other controls. Subsequent
 choices to turn spheres off are saved and respected on reload. Named views keep
 their recorded appearance; older named views without this setting remain flat.
+
+**Ambient light** and **Highlights** sliders appear below Sphere vertices in
+both panels. Each ranges from 0–100% in steps of 1%, with defaults of 85% and
+18%, preserving the previous material. Lower ambient light deepens shadows;
+higher highlights increase specular reflection. Diffuse light, highlight
+roughness and light position remain fixed. The 2D graph uses the controls for
+shadow depth and gradient highlights, retaining its former shading at the
+default values. PNG and 2D SVG exports retain the chosen shading.
+
+Lighting is independent between the graph and sample-reference panels, saved
+per dataset and in named views. Older settings use the defaults. Sliders are
+disabled when spheres are off; reference lighting is also disabled when reference
+vertices are hidden or unavailable. In 3D, moving a slider updates only sphere
+materials, preserving camera, geometry, opacity, sample colors and selection.
 
 ## Sample-view reference spheres
 

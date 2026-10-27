@@ -89,3 +89,5 @@
 !/rank2_feature_graph/test_valencia_supplement.py
 
 !/rank2_feature_graph/VALENCIA2_DATASETS.md
+
+!/rank2_feature_graph/test_dataset_preferences.mjs

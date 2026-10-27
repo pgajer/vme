@@ -69,7 +69,7 @@ function createDatasetPanelStorage(storage,identity){
 const datasetPanelNativeStorage=(()=>{try{return typeof window==='undefined'?localStorage:window.localStorage}catch{return null}})();
 const datasetPanelStorage=createDatasetPanelStorage(datasetPanelNativeStorage,()=>{try{return activeEmbeddingFamily?.id||META.id}catch{return META.id}});
 let datasetPanelReady=false,datasetPanelRestoring=false,datasetPanelLayout=null,datasetPanelControlDefaults=null,datasetPanelDetailDefaults=null;
-const datasetPanelControlIds=['dimension','vertexLabels','graphVertexColor','graphEdgeColor','graphVertexScale','graphSpheres','sampleReferenceSpheres','sampleReferenceScale','sampleReferenceColor','graphFadeBySize','graphFadeStrength','graphWidthBySize','graphEdgeWidth','graphWidthStrength','graphDegreeFilter','graphMinimumDegree','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
+const datasetPanelControlIds=['dimension','vertexLabels','graphVertexColor','graphEdgeColor','graphVertexScale','graphSpheres','graphSphereAmbient','graphSphereHighlights','sampleReferenceSphereAmbient','sampleReferenceSphereHighlights','sampleReferenceSpheres','sampleReferenceScale','sampleReferenceColor','graphFadeBySize','graphFadeStrength','graphWidthBySize','graphEdgeWidth','graphWidthStrength','graphDegreeFilter','graphMinimumDegree','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
 function panelReadJson(key,fallback){try{return JSON.parse(datasetPanelStorage.getItem(key))??fallback}catch{return fallback}}
 function panelControlSnapshot(){return Object.fromEntries(datasetPanelControlIds.map(id=>[id,el(id).type==='checkbox'?el(id).checked:el(id).value]))}
 function saveDatasetPanelSettings(){
@@ -109,6 +109,7 @@ function restoreDatasetPanelSettings(){
   el('sampleReferenceSpheres').checked=!(valid&&saved.sampleReferenceSpheresDefaultVersion===1&&saved.controls?.sampleReferenceSpheres===false);
   // Migrate the former off default once, then respect subsequent user choices.
   el('graphSpheres').checked=!(valid&&saved.graphSpheresDefaultVersion===1&&saved.controls?.graphSpheres===false);
+  for(const [panel,prefix] of [['graph','graphSphere'],['sample','sampleReferenceSphere']])restoreSphereLighting(panel,{ambient:valid?saved.controls?.[prefix+'Ambient']:undefined,highlights:valid?saved.controls?.[prefix+'Highlights']:undefined});
   setGraphVertexScale(valid?saved.controls?.graphVertexScale:undefined);
   restoreSampleReferenceSettings({scale:valid?saved.controls?.sampleReferenceScale:undefined,color:valid?saved.controls?.sampleReferenceColor:undefined});
   restoreGraphColorSettings({vertex:valid?saved.controls?.graphVertexColor:undefined,edge:valid?saved.controls?.graphEdgeColor:undefined});

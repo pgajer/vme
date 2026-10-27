@@ -101,3 +101,34 @@ assert.equal(trimmed.updates.line.length,trimmed.indices.length);
 console.log('PASS: size-scaled/uniform widths, selection emphasis, full-graph denominator, stable geometry, camera trimming, empty graphs and invalid settings.');
 
 const priorTrim=trimmed;c.restoreGraphWidthSettings({scaled:false,maximum:11});await c.trimGraphEdges();assert.equal(trimmed,priorTrim,'A pending width redraw must not trim an older trace layout');
+// Lighting changes target only sphere materials, retaining geometry, colors and other traces.
+c.restoreSphereLighting('graph');c.restoreSphereLighting('sample');
+assert.deepEqual(plain(c.sphereLightingSettings('graph')),{ambient:85,highlights:18});
+assert.deepEqual(plain(c.vertexSphereLighting('sample')),{ambient:.85,diffuse:.35,specular:.18,roughness:.6,fresnel:0});
+for(const invalid of [null,'',NaN,Infinity,-1,101,'bad']){
+ c.restoreSphereLighting('graph',{ambient:invalid,highlights:invalid});
+ assert.deepEqual(plain(c.sphereLightingSettings('graph')),{ambient:85,highlights:18});
+}
+for(const invalid of [null,{}, {ambient:NaN,highlights:18},{ambient:50,highlights:101}])assert.throws(()=>c.validateSphereLighting(invalid),/lighting/);
+c.validateSphereLighting(undefined);c.validateSphereLighting({ambient:0,highlights:100});
+el('graphSpheres').checked=true;el('sampleReferenceSpheres').checked=true;el('sampleReferenceSpheres').disabled=false;
+c.restoreSphereLighting('graph',{ambient:30,highlights:75});
+assert.deepEqual(plain(c.sphereLightingSettings('sample')),{ambient:85,highlights:18},'Panels are independent');
+const references=[{type:'mesh3d',meta:{referenceSphere:true},x:[1,2],color:'red',opacity:.5},{meta:{sampleView:'v'},x:[3,4],marker:{color:'blue'}},{meta:{participant:true},x:[5]}];
+el('samples').data=references;el('graph3d').data=[spheres[0],{meta:{graphEdges:true},x:[9]}];
+const immutable=JSON.stringify({references,graph:el('graph3d').data});let lightingUpdate;
+c.Plotly.restyle=async(plot,updates,indices)=>{lightingUpdate={plot,updates,indices}};
+await c.updateSphereLighting('graph');
+assert.equal(lightingUpdate.plot,el('graph3d'));assert.deepEqual(plain(lightingUpdate.indices),[0]);assert.equal(lightingUpdate.updates.lighting[0].ambient,.3);assert.equal(lightingUpdate.updates.lighting[0].specular,.75);
+c.restoreSphereLighting('sample',{ambient:0,highlights:100});await c.updateSphereLighting('sample');
+assert.equal(lightingUpdate.plot,el('samples'));assert.deepEqual(plain(lightingUpdate.indices),[0]);assert.equal(lightingUpdate.updates.lighting[0].specular,1);
+assert.equal(JSON.stringify({references,graph:el('graph3d').data}),immutable);
+el('sampleReferenceSpheres').checked=false;c.syncSphereLightingControls('sample');assert.equal(el('sampleReferenceSphereAmbient').disabled,true);
+el('graphSpheres').checked=false;c.syncSphereLightingControls('graph');assert.equal(el('graphSphereHighlights').disabled,true);
+// 2D shading uses the same settings and produces valid gradient stops at both extremes.
+el('graphSpheres').checked=true;let stops=[];c.node=(tag,attrs)=>{if(tag==='stop')stops.push(attrs);return {}};
+for(const ambient of [0,85,100])for(const highlights of [0,18,100]){
+ c.restoreSphereLighting('graph',{ambient,highlights});stops=[];c.graphSphereGradients({});assert.equal(stops.length,8);
+ for(const stop of stops)assert(stop['stop-color'].match(/\d+/g).every(v=>Number(v)>=0&&Number(v)<=255));
+}
+console.log('PASS: independent saved lighting defaults, invalid values, sphere-only material updates, unchanged geometry and samples, disabled flat controls and 2D gradient extremes.');
