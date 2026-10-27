@@ -170,6 +170,13 @@ def prepare(package, metadata_path, output, announce=True):
     validate_metadata(metadata, original, package_views(web, original))
     manifest = copy.deepcopy(original)
     manifest['seed'].update({k: metadata[k] for k in ('legendAbundanceTotals', 'embeddingStressDiagnostics')})
+    if metadata.get('associationResults'):
+        from association_supplement import validate as validate_associations
+        for dataset, bank in metadata['associationResults'].items():
+            if dataset not in original['datasets'] or bank['dataset'] != dataset:
+                raise ValueError('Association supplement requires its owning dataset')
+            validate_associations(bank)
+        manifest['seed']['associationResults'] = metadata['associationResults']
     if metadata.get('maxNormalizedEmbeddings'):
         from max_normalized_supplement import population, validate
         validate(metadata['maxNormalizedEmbeddings'], population(package, original),

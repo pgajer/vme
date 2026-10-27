@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 22 · reviewed 27 October 2026.
+Specification version 23 · reviewed 27 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -443,3 +443,14 @@ The original version-1 documentation-only consolidation was checked against
 the linked sources. Version 2 accompanies the comparison-view implementation
 and its palette-order regression check. The About page currently
 publishes the VMRC tables; this full specification is repository documentation.
+
+## Enrollment association overlays
+
+The separate Associations workspace uses the frozen enrollment graph, never
+recolors the exploratory all-visit graph. Both cohorts share a diverging
+log2-ratio scale: blue (#2166ac) below one, neutral (#dee2e4) at one, red
+(#b2182b) above one, saturated at ratios 1/8 and 8. The ratio is explicitly
+matched odds or descriptive observed/expected cases. Gray (#a3abb0) means
+unavailable, not evidence for no association. Edge width is fixed and no
+p-value or size fading is applied. Selection adds a dark outline without
+replacing the effect color. Zero/infinite estimates remain explicit.

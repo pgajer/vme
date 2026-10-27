@@ -150,3 +150,15 @@ Euclidean/L∞ population, local-selection,
 cohort or assay-subset, participant joint and saved-view routes. It checks that
 method changes preserve samples and assignments. Missing optional banks are
 reported as unavailable; they are never fitted by the test or updater.
+
+## Enrollment association viewer
+
+Run `node rank2_feature_graph/test_associations.mjs` for the synthetic
+association schema, denominator isolation, all four coverages and cohorts,
+unavailable/infinite estimates, comparison rendering and CSV checks.
+It optionally checks a locally supplied enrollment supplement. The private
+preparation test also reconciles original enrollment ledgers and independently
+checks exact conditional probabilities and confidence limits. These checks
+remain on demand and are not invoked by the update command.
+
+See [association usage and methods](rank2_feature_graph/ASSOCIATIONS.md).

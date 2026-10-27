@@ -97,3 +97,7 @@
 !/rank2_feature_graph/unfolded_views.js
 !/scripts/test_unfolded_supplement.py
 !/scripts/unfolded_supplement.py
+!/rank2_feature_graph/associations.js
+!/rank2_feature_graph/test_associations.mjs
+!/rank2_feature_graph/ASSOCIATIONS.md
+!/scripts/association_supplement.py

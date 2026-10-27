@@ -38,6 +38,7 @@ function datasetPresentation(coverage=META.defaultCoverage){
  el('panelSampleEmbedding').options[0].textContent=META.overviewLabel;
  for(const id of ['sampleEmbedding','panelSampleEmbedding'])el(id).options[1].textContent=META.globalLabel||'Global / restricted';
  loadDatasetColors();edgeOrder=new Map(sensitivityPaletteEdges(datasetRegistry.get(META.id)).map((e,i)=>[e.id,i]));updateDatasetChoices();syncAnalysisControls();syncSensitivityControls();
+ if(typeof syncAssociations==='function')syncAssociations();
 }
 function resetDatasetSelection(){
  pureCoverageComparison=null;
