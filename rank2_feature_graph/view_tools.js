@@ -130,13 +130,16 @@ const graphSphereMesh=(()=>{
  }
  return {points,i,j,k};
 })();
+// Strong fill light preserves the chosen color even when the fixed key light is
+// behind the camera-facing hemisphere. Softer highlights retain a rounded surface.
+function vertexSphereLighting(){return {ambient:.85,diffuse:.35,specular:.18,roughness:.6,fresnel:0}}
 function graphSphereTraces(g,lookup,degrees,fade){
  const unit=graphSphereUnit(lookup),mesh=graphSphereMesh;
  return g.nodes.map(n=>{
   const center=lookup.get(n.id),radius=graphNodeSize(degrees.get(n.id))*unit,points=mesh.points.map(p=>p.map((v,j)=>center[j]+radius*v));
   return {type:'mesh3d',meta:{graphSphere:n.id},x:points.map(p=>p[0]),y:points.map(p=>p[1]),z:points.map(p=>p[2]),i:mesh.i,j:mesh.j,k:mesh.k,
    color:graphVertexColor(n.id===selectedVertex||rank3.enabled&&n.id===rank3.vertex),opacity:fade.node(n.id),flatshading:false,
-   lighting:{ambient:.35,diffuse:.8,specular:.55,roughness:.25,fresnel:.15},lightposition:{x:100000,y:200000,z:300000},
+   lighting:vertexSphereLighting(),lightposition:{x:100000,y:200000,z:300000},
    customdata:points.map(()=>'vertex:'+n.id),text:points.map(()=>esc(graphNodeHover(n,degrees.get(n.id))).replaceAll('\n','<br>')),hovertemplate:'%{text}<extra></extra>',showlegend:false};
  });
 }
@@ -169,7 +172,7 @@ function sampleReferenceSphereTraces(traces,layout){
    const radius=at(t.marker?.size,n,8)*unit,points=mesh.points.map(p=>p.map((v,j)=>center[j]+radius*v)),hover=at(t.hovertext,n,at(t.text,n,t.name||'Reference vertex'));
    result.push({type:'mesh3d',meta:{...t.meta,referenceSphere:true},x:points.map(p=>p[0]),y:points.map(p=>p[1]),z:points.map(p=>p[2]),i:mesh.i,j:mesh.j,k:mesh.k,
     color:at(t.marker?.color,n,'#24414c'),opacity:(t.opacity??1)*at(t.marker?.opacity,n,1),flatshading:false,
-    lighting:{ambient:.35,diffuse:.8,specular:.55,roughness:.25,fresnel:.15},lightposition:{x:100000,y:200000,z:300000},
+    lighting:vertexSphereLighting(),lightposition:{x:100000,y:200000,z:300000},
     name:t.name,legendgroup:t.legendgroup,showlegend:n===0&&(t.showlegend??layout.showlegend===true),
     customdata:points.map(()=>at(t.customdata,n,null)),text:points.map(()=>hover),hoverinfo:t.hoverinfo,
     hovertemplate:(t.hovertemplate||'%{text}<extra></extra>').replaceAll('%{hovertext}','%{text}')});
@@ -183,7 +186,7 @@ function graphSphereGradients(svg){
  const defs=node('defs',{},svg);
  for(const active of [false,true]){
   const color=graphVertexColor(active),gradient=node('radialGradient',{id:active?'graphSphereSelected':'graphSphereBase',cx:'.32',cy:'.28',r:'.72'},defs);
-  for(const [offset,mix] of [[0,.85],[.25,.25],[.6,0],[1,-.65]]){
+  for(const [offset,mix] of [[0,.65],[.25,.2],[.6,0],[1,-.15]]){
    const rgb=color.slice(1).match(/../g).map(v=>parseInt(v,16)),shade=rgb.map(v=>Math.round(mix>=0?v+(255-v)*mix:v*(1+mix)));
    node('stop',{offset,'stop-color':'rgb('+shade.join(',')+')'},gradient);
   }
