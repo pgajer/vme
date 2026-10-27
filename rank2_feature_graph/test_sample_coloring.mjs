@@ -60,3 +60,13 @@ const other=c.sampleCohortColor('new-cohort');c.META={id:'another-dataset'};
 assert.deepEqual(major.map(id=>c.sampleCohortColor(id)),palette);assert.equal(c.sampleCohortColor('new-cohort'),other);
 assert.equal(c.sampleCohortColor(null),'#7c878d');assert.equal(c.sampleCohortColor('Multiple cohorts'),'#686868');
 console.log('PASS: distinct major-cohort palette, fixed cross-dataset identities, deterministic fallback and neutral missing/mixed cohorts.');
+// Missing scientific annotations remain visible as unavailable, never as historical CST calls.
+delete c.BUNDLE_PACK.valencia2.test;c.META.id='test';c.DATA=DATA;el('sampleColorScheme').value='valencia2-cst';
+run('syncSampleColorOptions()');
+for(const value of ['valencia2-cst','valencia2-subtype']){
+ const o=el('sampleColorScheme').options.find(o=>o.value===value);
+ assert.equal(o.disabled,true);assert.equal(o.hidden,false);assert.match(o.textContent,/unavailable/);assert.match(o.title,/verified annotations/);
+}
+assert.equal(el('sampleColorScheme').value,'pure');
+c.META.id='hmp-u01-2019';assert.match(run('valenciaUnavailableReason()'),/legacy taxon names/);
+console.log('PASS: unavailable VALENCIA2 choices stay visible with the mapping prerequisite; no historical-label fallback.');

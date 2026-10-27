@@ -83,3 +83,9 @@
 !/rank2_feature_graph/test_dataset_maxnorm.mjs
 !/scripts/dataset_maxnorm_supplement.py
 !/scripts/test_dataset_maxnorm_supplement.py
+
+!/rank2_feature_graph/valencia_supplement.py
+
+!/rank2_feature_graph/test_valencia_supplement.py
+
+!/rank2_feature_graph/VALENCIA2_DATASETS.md

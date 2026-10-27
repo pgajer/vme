@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 20 · reviewed 26 October 2026.
+Specification version 21 · reviewed 27 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -60,9 +60,16 @@ graph mode, selected samples and saved embedding:
   visit labels/order; background points retain state colors or the existing
   gray-background setting.
 - **Top-3 CSTs** retains the existing rank-3 palette when that display is active.
-- **VALENCIA2 CSTs / subCSTs** retain the saved annotations where available.
+- **VALENCIA2 CSTs / subCSTs** use saved annotations with the same fixed palette
+  in every dataset. ZAPPS & PreSSMat reuses comb-V4 calls only after exact record
+  and full-composition checks. LSVF uses new full-composition calls against the
+  pinned August 2024 centroids, retaining unmatched taxa and source cautions.
+  The two HMP/U01 releases and PAPCLEAR show unavailable choices until their
+  legacy taxonomy has a verified mapping; historical CST labels are never
+  silently promoted to VALENCIA2. Separately supplied annotation supplements
+  must match the dataset revision, profile IDs, record mapping and compositions.
 
-The active choice has a tooltip and a visible explanatory note. Legend counts
+The active choice has a tooltip. Unavailable VALENCIA2 choices explain the missing prerequisite in their tooltip and the Color by tooltip. Legend counts
 and percentages use the same displayed identities as before; reference markers
 are excluded. A color switch restyles existing sample markers without changing
 coordinates, marker visibility, reference diamonds, camera, graph selection,

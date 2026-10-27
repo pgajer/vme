@@ -16,7 +16,12 @@ function sampleColorTitle(){
  const mode=sampleColorMode();
  return mode==='default'?el('coverage').value+'% 2-CSTs':mode==='pure'?'Pure 2-CSTs':mode==='cohorts'?'Cohorts':mode==='visits'?'Visit colors':mode==='rank3'?'Top-3 CSTs':mode==='valencia2-subtype'?'VALENCIA2 subCSTs':'VALENCIA2 CSTs';
 }
+function valenciaUnavailableReason(){
+ if(['umb-hmp-2019-panel','hmp-u01-2019','papclear-v3v4-provisional-20261017'].includes(META.id))return 'VALENCIA2 is unavailable: the legacy taxon names need a verified mapping to the VALENCIA2 reference. Historical CST labels are not VALENCIA2 calls.';
+ return 'VALENCIA2 is unavailable: verified annotations have not been supplied for this dataset. Install its VALENCIA2 supplement.';
+}
 function sampleColorHelp(){
+ if(sampleColorMode().startsWith('valencia2-')&&!valenciaAsset())return valenciaUnavailableReason();
  const help={default:'Color by merged 2-CST group at the chosen dataset coverage. This percentage does not describe taxon abundance.',pure:'Original, unmerged top-two-taxa assignments. Pure does not mean that a sample contains only two taxa.',cohorts:'Recorded cohort membership. Missing metadata is Unclassified. A composition shared across cohorts is labeled Multiple cohorts when records are represented by a single point.',visits:'Participant visit labels or order. Available during a participant trajectory; background samples retain their state colors or gray background setting.',rank3:'Original top-three-taxa assignments; coloring does not change the selected samples.', 'valencia2-cst':'Saved VALENCIA2 CST annotations; no classifications are recalculated.','valencia2-subtype':'Saved VALENCIA2 subCST annotations; no classifications are recalculated.'};
  return (help[sampleColorMode()]||help.default)+' Only colors change.';
 }
@@ -67,10 +72,10 @@ function syncSampleColorOptions(){
  if(!sampleColorBundle())return;
  const select=el('sampleColorScheme'),merged=!!sampleMergedColors(),available=!!valenciaAsset();
  const options=[['default',el('coverage').value+'% 2-CSTs',merged],['pure','Pure 2-CSTs',true],['cohorts','Cohorts',true],['visits','Visit colors',participant.active],['rank3','Top-3 CSTs',rank3.enabled],['valencia2-cst','VALENCIA2 CSTs',available],['valencia2-subtype','VALENCIA2 subCSTs',available]];
- for(const [value,label,enabled] of options){const option=Array.from(select.options).find(o=>o.value===value);if(option){option.textContent=label;option.disabled=!enabled;option.hidden=!enabled&&value!=='default'}}
+ for(const [value,label,enabled] of options){const option=Array.from(select.options).find(o=>o.value===value);if(option){const valencia=value.startsWith('valencia2-');option.textContent=label+(valencia&&!enabled?' (unavailable)':'');option.disabled=!enabled;option.hidden=!enabled&&value!=='default'&&!valencia}}
  if(!options.some(([value,,enabled])=>enabled&&value===select.value))select.value=merged?'default':'pure';
- select.title=sampleColorHelp();
- el('sampleColorLabel').title=sampleColorHelp();
+ select.title=sampleColorHelp()+(available?'':' '+valenciaUnavailableReason());
+ el('sampleColorLabel').title=select.title;
  for(const option of Array.from(select.options)){const old=select.value;select.value=option.value;option.title=sampleColorHelp();select.value=old}
  el('sampleColorHelp').textContent=sampleColorHelp();
  const mode=sampleColorMode(),legacy={default:'merged',pure:'original',visits:'visit'}[mode];

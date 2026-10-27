@@ -50,6 +50,22 @@ ctx.other=other;const slow=run('switchDataset(other)');await new Promise(r=>setT
 const visited=[],optionalChecks={};
 for(const id of Object.keys(manifest.datasets)){
  ctx.id=id;await run('switchDataset(id)');await flush();assert.equal(run('META.id'),id);assert.equal(run('graphEmbeddingJobs.size'),0);visited.push(id);
+ // Validate installed VALENCIA2 assignments through the actual color/export functions.
+ run(`{const asset=valenciaAsset();if(asset){
+  const savedMode=el('sampleColorScheme').value,before=JSON.stringify(asset);
+  for(const mode of ['valencia2-cst','valencia2-subtype']){
+   el('sampleColorScheme').value=mode;
+   const sub=mode==='valencia2-subtype',palette=sub?valenciaSubtypeColors:valenciaCstColors;
+   for(const record of asset.records){
+    const profile=asset.profiles[record.profile],expected=profile[sub?'subCST':'cst'];
+    const category=sampleColorCategory(0,record,record.profile);
+    if(category.id!==expected||category.color!==palette[expected])throw Error('VALENCIA2 color mapping differs: '+META.id);
+   }
+  }
+  if(valenciaCsv().split('\\r\\n').length!==asset.records.length+2)throw Error('VALENCIA2 export row count differs');
+  el('sampleColorScheme').value=savedMode;
+  if(JSON.stringify(asset)!==before)throw Error('VALENCIA2 annotations mutated');
+ }}`);
  // Preserve the original locale, numeric coercion, rounding and grouping.
  run(`{const values=[0,-0,0.004,0.005,-0.005,1.005,99.999,1000,12345.6789,NaN,Infinity,-Infinity,Number.MAX_SAFE_INTEGER,null,undefined,'', '12.345'];
   for(const g of Object.values(DATA.graphs))for(const e of g.edges)values.push(e.frequency,e.length);

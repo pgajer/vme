@@ -185,6 +185,17 @@ def prepare(package, metadata_path, output, announce=True):
             participants=next(part['participants'][dataset] for part in parts if dataset in part.get('participants',{}))
             subject_contexts={k:v for part in parts for k,v in part.get('subjectEmbeddings',{}).get('contexts',{}).items()}
             validate_dataset_maxnorm(bank,bundle,participants,{'contexts':subject_contexts})
+    valencia_banks = metadata.get('valencia2', {})
+    if valencia_banks:
+        from valencia_supplement import validate as validate_valencia
+        for dataset, asset in valencia_banks.items():
+            if dataset not in original['datasets']: raise ValueError('VALENCIA2 supplement requires dataset ' + dataset)
+            parts = [json.loads(checked_bytes(web, d)) for d in original['datasets'][dataset]['parts']]
+            if any(dataset in part.get('valencia2', {}) for part in parts):
+                raise ValueError('VALENCIA2 supplement would replace existing annotations: ' + dataset)
+            bundle = next(b for part in parts for b in part.get('bundles', []) if b['dataset']['id'] == dataset)
+            participants = next(part['participants'][dataset] for part in parts if dataset in part.get('participants', {}))
+            validate_valencia(asset, bundle, participants)
     pure_vertices = metadata.get('pureVertexLocal')
     if pure_vertices:
         from pure_vertex_supplement import package_part, saved_fits, validate as validate_pure_vertices
@@ -232,6 +243,8 @@ def prepare(package, metadata_path, output, announce=True):
     manifest['validator'] = publish((HERE / 'bundle_format.js').read_bytes())
     if pure_vertices:
         manifest['datasets']['comb-V3V4-tx']['parts'].append(publish(encoded({'pureVertexLocal': pure_vertices}), 'json'))
+    for dataset, asset in valencia_banks.items():
+        manifest['datasets'][dataset]['parts'].append(publish(encoded({'valencia2': {dataset: asset}}), 'json'))
     for dataset,bank in dataset_banks.items():
         parts=manifest['datasets'][dataset]['parts']
         parts.append(publish(encoded({'datasetMaxNormalizedEmbeddings':{dataset:{**bank,'fits':{}}}}),'json'))
