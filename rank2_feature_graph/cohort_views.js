@@ -57,7 +57,9 @@ function syncAnalysisControls(){
   el(id).innerHTML=choices.map(c=>`<option value="${esc(c)}">${esc(a?(c==='all'&&activeStateMode==='pure'&&a.combDisplay&&!a.eligibility?'Frozen distinct-profile view':cohortChoiceLabel(a.populations[c].title)):records?(c==='all'?'Frozen distinct-profile view':cohortChoiceLabel(records.populations[c].title)):'Full combined reference')}</option>`).join('');el(id).value=activeCohort;el(id).disabled=!a&&!records;el(id).title=cohortControlHelp();
  }
  for(const id of ['stateMode','panelStateMode']){el(id).value=activeStateMode;el(id).disabled=!a}
- for(const id of ['coverageLabel','panelCoverageLabel'])el(id).textContent=activeStateMode==='merged'?'Reference core target':'Reference state coverage';
+ const coverageHelp='Choose the largest pure 2-CSTs that together cover at least this percentage of the reference dataset. '+(activeStateMode==='merged'?'Remaining samples are assigned to these groups; all samples stay in the view.':'Show samples belonging to these states.');
+ for(const id of ['coverageLabel','panelCoverageLabel']){el(id).textContent='Largest 2-CSTs coverage';el(id).title=coverageHelp}
+ for(const id of ['coverage','panelCoverage'])el(id).title=coverageHelp;
  el('scope').options[2].textContent=DATA.eligibleIndices?'Full selected population':'Full dataset';
  const message=!a?(records?'Reviewed source-record and participant views use existing coordinates. Merged states are not prepared.':'Cohort and merged-state assets are not supplied for this dataset.'):activeStateMode==='merged'?'Merged groups retain every selected record. Core pairs name groups; absorbed samples may have different leading taxa.':'Pure-state coverage filters the selected cohort using the reference state catalogue.';
  for(const id of ['analysisMessage','panelAnalysisMessage'])el(id).textContent=message;
