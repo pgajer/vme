@@ -11,10 +11,45 @@ function legendPopulation(bundle,records=false){
  const distinct=bundle.dataset.observationUnit==='distinct-composition';
  const identities=new Set(records?(source||[]).map((r,i)=>r.id??i):profiles.map(p=>distinct?profileKey(p):p));
  const byProfile=new Map();if(source)source.forEach((r,i)=>{if(!byProfile.has(r.profile))byProfile.set(r.profile,[]);byProfile.get(r.profile).push({record:r,key:r.id??i})});
- const result={source,identities,byProfile,N:identities.size,profileKey:distinct?profileKey:p=>p,
+ const result={source,profiles,identities,byProfile,N:identities.size,profileKey:distinct?profileKey:p=>p,
   unit:records?(a?.observationLabel||adapter?.observationLabel||(bundle.dataset.observationUnit==='sample'?bundle.dataset.observationLabel:'source records')||'observations'):(distinct?'distinct compositions':bundle.dataset.observationLabel||'observations'),
   name:bundle.dataset.title||bundle.dataset.id};
  cache.set(key,result);return result;
+}
+// Hover membership always uses the complete eligible dataset, independent of
+// cohort, graph selection, visible points and the legend percentage toggle.
+const sampleCstHoverCache=new WeakMap();
+function sampleHoverRecordMode(){const b=datasetRegistry.get(META.id);return participant.active||!!DATA.records||b?.cohortAnalysis?.populationVersion===2&&b.dataset.observationUnit!=='distinct-composition'}
+function sampleCstHoverModel(records=sampleHoverRecordMode(),bundle=datasetRegistry.get(META.id),coverage=el('coverage').value){
+ const population=legendPopulation(bundle,records),merged=bundle.cohortAnalysis?.merged?.[coverage],triples=rank3Base(bundle);
+ let cache=sampleCstHoverCache.get(bundle);if(!cache){cache=new Map();sampleCstHoverCache.set(bundle,cache)}
+ const key=(records?'records:':'profiles:')+coverage,old=cache.get(key);
+ if(old&&old.population===population&&old.merged===merged&&old.triples===triples)return old;
+ const pure=bundle.data.samples.pair,counts=[new Map(),new Map(),new Map()],seen=new Set();
+ const add=(identity,profile)=>{
+  if(!population.identities.has(identity)||seen.has(identity))return;seen.add(identity);
+  [pure[profile],merged?.pairs?.[profile],triples.membership[profile]].forEach((id,k)=>{if(id!=null)counts[k].set(id,(counts[k].get(id)||0)+1)});
+ };
+ if(records)(population.source||[]).forEach((r,i)=>add(r.id??i,r.profile));
+ else population.profiles.forEach(profile=>add(population.profileKey(profile),profile));
+ const labels=new Map(displayGraph(bundle.data.graphs['100'],bundle.data).edges.map(e=>[e.id,e.label]));
+ const model={bundle,records,coverage,population,merged,triples,pure,counts,labels,rows:new Map()};cache.set(key,model);return model;
+}
+function sampleCstHover(profile,model=sampleCstHoverModel()){
+ if(model.rows.has(profile))return model.rows.get(profile);
+ const {bundle,records,coverage,population,merged,triples,pure,counts,labels}=model,N=population.N;
+ const label=id=>legendCstLabel(id,bundle,records,labels.get(id)||String(id).split(',').map(j=>taxonDisplayLabel(bundle.data.featureNames[j]||j)).join(' + '));
+ const line=(title,id,k,missing)=>{
+  if(id==null)return '<br>'+title+': '+missing;
+  const n=counts[k].get(id)||0,pct=N?(n>0&&100*n/N<.01?'&lt;0.01':(100*n/N).toFixed(2)):'—';
+  return '<br>'+title+': '+esc(label(id))+' (n='+n.toLocaleString()+'; '+pct+'%)';
+ };
+ const top=bundle.data.sampleTopFeatures[profile]||[],pair=top.length>=2&&top[1][1]>0?pure[profile]:null;
+ const text=line('Pure 2-CST',pair,0,'none (fewer than two positive taxa)')+
+  line(esc(coverage)+'% merged 2-CST',merged?.pairs?.[profile],1,merged?'unassigned':'unavailable')+
+  line('Pure 3-CST',triples.membership[profile],2,'none (fewer than three positive taxa)')+
+  '<br>n: '+esc(population.unit)+'; % of full dataset (N='+N.toLocaleString()+').';
+ model.rows.set(profile,text);return text;
 }
 function legendRows(entries,classify){
  const seen=new Set(),groups=new Map();

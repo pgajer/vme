@@ -563,16 +563,16 @@ function sampleHover(i){return (rank3.enabled?('<b>'+esc(rank3Id(i)?'Original to
 // text on dataset, cohort, sensitivity or annotation replacement.
 let samplePlotHoverCache=null;
 function samplePlotHoverState(){
- const participants=participantData(),annotations=valenciaAsset(),prepared=BUNDLE_PACK.participantPreparation?.[META.id];
+ const participants=participantData(),annotations=valenciaAsset(),prepared=BUNDLE_PACK.participantPreparation?.[META.id],cst=sampleCstHoverModel();
  let cache=samplePlotHoverCache;
- if(!cache||cache.data!==DATA||cache.participants!==participants||cache.annotations!==annotations||cache.prepared!==prepared||cache.dataset!==META.id)
-  cache=samplePlotHoverCache={data:DATA,participants,annotations,prepared,dataset:META.id,rows:new Array(DATA.samples.ids.length)};
+ if(!cache||cache.data!==DATA||cache.participants!==participants||cache.annotations!==annotations||cache.prepared!==prepared||cache.dataset!==META.id||cache.cst!==cst)
+  cache=samplePlotHoverCache={data:DATA,participants,annotations,prepared,cst,dataset:META.id,rows:new Array(DATA.samples.ids.length)};
  return cache;
 }
 function samplePlotHover(i,cache=samplePlotHoverState()){
  if(cache.rows[i]!==undefined)return cache.rows[i];
  const id=DATA.samples.ids[i],r=participantRecordForId(id);
- const text=r?participantSampleHover(r):compactSampleHover(id,DATA.sampleTopFeatures[i])+valenciaHover(valenciaSampleProfile(i),DATA.records?.[i]?.id);
+ const text=r?participantSampleHover(r):compactSampleHover(id,DATA.sampleTopFeatures[i])+valenciaHover(valenciaSampleProfile(i),DATA.records?.[i]?.id)+sampleCstHover(valenciaSampleProfile(i),cache.cst);
  cache.rows[i]=text;return text;
 }
 // The batch is synchronous: its source identities cannot change between rows.

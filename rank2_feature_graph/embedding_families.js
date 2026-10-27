@@ -368,6 +368,8 @@ function renderFamily(camera=null){
   const principal=typeof principalModel==='function'?principalModel(hood,selection):null,linked=principal?principalLinked(hood,selection,graphLinked):graphLinked;
   const hover=hood.profileIds.map((id,i)=>esc(id)+'<br>'+esc(hood.anchor)+' abundance: '+(hood.abundance[i]*100).toPrecision(5)+'%<br>'+hood.multiplicity[i]+' source record(s)'+(color.labels[i]?'<br>'+esc(color.labels[i]):'')+'<br>'+base.sampleTopFeatures[hood.profileIndices[i]].map(([name,value])=>esc(name.replaceAll('_',' '))+': '+Number(value).toPrecision(4)+'%').join('<br>'));
   if(color.mode.startsWith('valencia2-'))hover.forEach((text,i)=>{hover[i]=text+valenciaHover(hood.profileIndices[i],null,BUNDLE_PACK.valencia2[hood.collection])});
+  const cstHover=sampleCstHoverModel(false,datasetRegistry.get(hood.collection),graphState?.coverage||selection.colorCoverage||'60');
+  hover.forEach((text,i)=>{hover[i]=text+sampleCstHover(hood.profileIndices[i],cstHover)});
   if(principal)hover.forEach((text,i)=>{hover[i]=text+'<br>'+esc(principalErrorText(principal,i))});
   const foreground=hood.profileIds.map((_,i)=>i).filter(i=>linked.mask[i]),background=hood.profileIds.map((_,i)=>i).filter(i=>!linked.mask[i]);
   const graphColorOverride=familyGraphReady&&rank3.enabled&&rank3.color==='rank3'&&!color.mode.startsWith('valencia2-');

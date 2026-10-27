@@ -110,8 +110,7 @@ function valenciaColorForProfile(profile,fallback){
 function valenciaSampleColor(i,fallback){return sampleColorBundle()?samplePaletteColor(i,fallback):fallback==='#93b3c1'?fallback:valenciaColorForProfile(valenciaSampleProfile(i),fallback)}
 function valenciaHover(profile,recordId=null,asset=valenciaAsset()){
  const a=asset?.profiles[profile];if(!a)return '';
- const record=recordId?valenciaRecordMap().get(recordId):null;
- return `<br><b>VALENCIA2 CST ${esc(a.cst)} · ${esc(a.subCST)}</b><br>Similarity: ${a.score.toFixed(4)} · margin: ${a.margin.toFixed(4)}<br>Reference-matched abundance: ${(100*a.matchedFraction).toFixed(2)}%<br>Runner-up: ${esc(a.runnerUp)}${a.tieCount>1?'<br>Near/exact tie (≤1e-12); reference order breaks exact ties':''}${record?'<br>Historical labels: '+esc(record.historical.status.replaceAll('_',' '))+(record.historical.labels.length?'<br>'+record.historical.labels.map(l=>esc(l.source)+': '+esc(l.fields.subCST||l.fields.CST||l.fields['sub.cst']||'Not supplied')).join('<br>'):''):''}<br>Diagnostics, not calibrated confidence; source quality holds retained.`;
+ return `<br><b>VALENCIA2 CST ${esc(a.cst)} · ${esc(a.subCST)}</b><br>Similarity: ${a.score.toFixed(4)} · margin: ${a.margin.toFixed(4)}<br>Reference-matched abundance: ${(100*a.matchedFraction).toFixed(2)}%<br>Runner-up: ${esc(a.runnerUp)}${a.tieCount>1?'<br>Near/exact tie (≤1e-12); reference order breaks exact ties':''}`;
 }
 const valenciaRecordMaps=new WeakMap();
 function familyValenciaAvailable(collection){return !!BUNDLE_PACK.valencia2?.[collection]}

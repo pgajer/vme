@@ -403,7 +403,7 @@ function participantSampleHover(r){
  // paint hover labels. Trajectory construction retains its original checks.
  const positions=prepared?.datasetRevision===d?.datasetRevision&&prepared?.analysisRevision===d?.analysisRevision&&prepared?.auditRevision===d?.provenance.auditSha256?prepared.leadingPositions?.[r.profile]:null;
  const taxa=(positions?positions.map(i=>sparse[i]):trajectoryLeadingFeatures(sparse,5)).map(([j,v])=>[d.features[j],100*v]);
- return compactSampleHover(r.subject?participantLabel(r):r.id,taxa)+(typeof valenciaHover==='function'?valenciaHover(r.profile,r.id):'');
+ return compactSampleHover(r.subject?participantLabel(r):r.id,taxa)+(typeof valenciaHover==='function'?valenciaHover(r.profile,r.id):'')+(typeof sampleCstHover==='function'?sampleCstHover(r.profile):'');
 }
 function participantHover(r){return `<b>${esc(participantLabel(r))}</b><br>${esc(r.cohort)} · ${esc(r.id)}<br>Specimen: ${esc(r.specimen)}<br>Original visit: ${esc(r.originalVisit||'missing')}<br>Collection time: ${esc(participantDateLabel(r))}${r.transitionPolicy?'<br>Reviewed visit: '+esc(r.reviewedVisit||'unavailable')+'<br>Participant unit: '+esc(r.participantUnit)+'<br>Link evidence: '+esc(r.metadataEvidence)+'<br>Timing evidence: '+esc(r.timingEvidence):''}<br>${r.flags.map(esc).join('<br>')}`}
 function participantVisitMetadata(r){
