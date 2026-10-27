@@ -40,6 +40,11 @@ function sampleEmbeddingTitle(overview=false){
   const fit=overview?DATA.overviewEmbeddings?.[el('coverage').value]:null;
   const restricted=!overview||fit?.fittingScope==='population-restriction'||isMax&&(activeCohort!=='all'||activeStateMode==='pure');
   scope=isMax&&datasetMaxNormalizedAsset()&&overview?(activeCohort==='all'?'Population 3D MDS':'Cohort 3D MDS'):restricted?'Population 3D MDS (restricted)':'Population 3D MDS';
+  if(isMax&&datasetMaxNormalizedAsset()&&overview){
+   const fitted=datasetMaxNormalizedPopulationView();
+   const shown=new Set((DATA.overviewEmbeddings?.[el('coverage').value]?.indices||eligibleIndices()).map(i=>DATA.records?.[i]?.profile??i));
+   if(fitted?.profiles.some(p=>!shown.has(p)))scope+=' (restricted)';
+  }
  }
  if(isMax)return (mode.startsWith('maxnorm-euclidean')?'Max-normalized Euclidean':'Max-normalized L∞')+' · '+scope;
  return standardSampleEmbeddingTitle(scope);

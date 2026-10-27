@@ -4,6 +4,15 @@ import base64, hashlib, json, math, struct
 def digest(value):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
 
+def population_profiles(bundle,participants,cohort):
+    """Resolve recorded cohort or assay-subset membership without reclassification."""
+    analysis=bundle['cohortAnalysis'];population=analysis['populations'][cohort]
+    if 'recordIndices' in population:
+        return sorted({analysis['records'][i]['profile'] for i in population['recordIndices']})
+    sources=population.get('sourceCohorts')
+    return sorted({r['profile'] for r in participants['records']
+                   if cohort=='all' or r['cohort'] in (sources or [cohort])})
+
 def validate(asset,bundle,participants,subjects=None):
     def require(ok,message):
         if not ok:raise ValueError('Max-normalized supplement: '+message)
@@ -29,10 +38,11 @@ def validate(asset,bundle,participants,subjects=None):
         require(key in members and members[key]==sorted(set(pp)),'context membership differs')
         require(all(key+':'+m in fits for m in ('euclidean','linf')),'missing metric')
     for cohort,key in asset['globals'].items():
-        membership(key,[r['profile'] for r in participants['records'] if cohort=='all' or r['cohort']==cohort])
+        membership(key,population_profiles(bundle,participants,cohort))
     require(set(asset['globals'])==set(bundle['cohortAnalysis']['populations']),'incomplete cohort globals')
     expected={};d=bundle['data'];a=bundle['cohortAnalysis']
-    def context(cohort,mode,q,kind,key,pp):expected[json.dumps([cohort,mode,str(q),kind,str(key)],separators=(',',':'))]=pp
+    # The viewer uses the base bundle for All/pure, not its cohort specification.
+    def context(cohort,mode,q,kind,key,pp):expected.setdefault(json.dumps([cohort,mode,str(q),kind,str(key)],separators=(',',':')),pp)
     for q,g in d['graphs'].items():
         context('all','pure',q,'overview','',d['overviewEmbeddings'][q]['indices'])
         for e in g['edges']:context('all','pure',q,'group',e['id'],d['localEmbeddings'][e['id']]['indices'])

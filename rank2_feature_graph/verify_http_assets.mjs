@@ -316,10 +316,16 @@ assert.equal(run('selected'),ctx.pureEdge);
 assert(requests.length>beforePureRestore,'Pure named view restores its 100% catalogue fit');
 assert.deepEqual(hashes(),before,'Core/non-core comparison preserves scientific bundles');
 // Optional new coordinate banks: representative UI routes, not a layout audit.
-await run('switchDataset("zapps-pressmat-v4")');await flush();
-optionalChecks.zappsMaxNormalized=!!run('datasetMaxNormalizedAsset()');
-if(optionalChecks.zappsMaxNormalized){
- for(const [cohort,mode,q,kind] of [['all','merged','60','vertex'],['ZAPPS','pure','80','group'],['PreSSMat','merged','100','vertex']]){
+for(const fixture of [
+ {id:'zapps-pressmat-v4',cohort:'PreSSMat',flag:'zappsMaxNormalized',views:[['all','merged','60','vertex'],['ZAPPS','pure','80','group'],['PreSSMat','merged','100','vertex']]},
+ {id:'lsvf-v3v4-20241111',cohort:'LSVF',flag:'lsvfMaxNormalized',views:[['all','merged','60','vertex'],['all','pure','80','vertex'],['metabolite','pure','80','group'],['metabolite+immune','merged','100','vertex']]}
+]){
+ if(!manifest.datasets[fixture.id])continue;
+ ctx.maxnormDataset=fixture.id;ctx.maxnormCohort=fixture.cohort;
+ await run('switchDataset(maxnormDataset)');await flush();
+ optionalChecks[fixture.flag]=!!run('datasetMaxNormalizedAsset()');
+ if(!optionalChecks[fixture.flag])continue;
+ for(const [cohort,mode,q,kind] of fixture.views){
   Object.assign(ctx,{testCohort:cohort,testMode:mode,testQ:q,testKind:kind});
   await run('changeAnalysis(testCohort,testMode,testQ)');await flush();
   await run('testKind==="vertex"?selectVertex(current().nodes.slice().sort((a,b)=>current().edges.filter(e=>e.from===b.id||e.to===b.id).reduce((n,e)=>n+e.frequency,0)-current().edges.filter(e=>e.from===a.id||e.to===a.id).reduce((n,e)=>n+e.frequency,0))[0].id):select(current().edges.slice().sort((a,b)=>b.frequency-a.frequency)[0].id)');await flush();
@@ -339,12 +345,14 @@ if(optionalChecks.zappsMaxNormalized){
   }
   await run('clearSelection()');await flush();assert.equal(run('el("sampleEmbedding").value'),'maxnorm-linf');
   assert(run('el("sampleTitle").textContent.includes("MDS")'));
+  if(cohort==='all'&&mode==='pure')assert.deepEqual(clone(run('maxNormalizedView().profiles')),clone(run('datasetRegistry.get(META.id).data.overviewEmbeddings[el("coverage").value].indices')).sort((a,b)=>a-b));
+  if(cohort!=='all'&&mode==='pure')assert(run('el("sampleTitle").textContent.includes("(restricted)")'),'Pure subset title identifies the population restriction');
  }
- await run('changeAnalysis("PreSSMat","merged","70")');await flush();
- ctx.maxnormParticipant=run('[...participantGroups()].find(([key,rs])=>rs.length>1&&rs[0].cohort==="PreSSMat")[0]');
+ await run('changeAnalysis(maxnormCohort,"merged","70")');await flush();
+ ctx.maxnormParticipant=run('[...participantGroups()].find(([key,rs])=>rs.length>1&&rs[0].cohort===maxnormCohort)[0]');
  await run('participant.embeddingMode="union";openParticipant(maxnormParticipant)');await flush();
  for(const mode of ['pure','merged']){
-  ctx.testMode=mode;await run('changeAnalysis("PreSSMat",testMode,"70")');await run('participant.embeddingMode="union";openParticipant(maxnormParticipant)');await flush();
+  ctx.testMode=mode;await run('changeAnalysis(maxnormCohort,testMode,"70")');await run('participant.embeddingMode="union";openParticipant(maxnormParticipant)');await flush();
   for(const method of ['maxnorm-euclidean','maxnorm-linf']){
    ctx.testMethod=method;await run('changeEmbeddingChoice(testMethod)');await flush();
    assert.equal(el('retrySubjectEmbedding').hidden,true,el('sampleStatus').textContent);

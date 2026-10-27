@@ -1,5 +1,5 @@
 import base64, copy, struct, unittest
-from dataset_maxnorm_supplement import digest,validate
+from dataset_maxnorm_supplement import digest,validate,population_profiles
 
 class DatasetMaxnorm(unittest.TestCase):
     def setUp(self):
@@ -16,6 +16,22 @@ class DatasetMaxnorm(unittest.TestCase):
     def seal(self,a):a['revision']=digest({k:v for k,v in a.items() if k!='revision'})
     def test_valid_frozen_bank(self):
         before=copy.deepcopy(self.a);validate(self.a,self.b,self.p,self.s);self.assertEqual(before,self.a)
+    def test_assay_subset_uses_explicit_record_membership(self):
+        a=self.b['cohortAnalysis'];a['records']=[{'profile':1},{'profile':0}]
+        a['populations']['assay']={'recordIndices':[0]}
+        self.assertEqual(population_profiles(self.b,self.p,'assay'),[1])
+        a['populations']['combined']={'sourceCohorts':['all']}
+        self.assertEqual(population_profiles(self.b,self.p,'combined'),[0,1])
+    def test_base_pure_overview_keeps_its_coverage_population(self):
+        import json
+        self.b['data']['overviewEmbeddings']['60']['indices']=[0]
+        self.b['cohortAnalysis'].update(fits={'full':{'profileIndices':[0,1]}},specs={'all|pure|60':{'cohort':'all','mode':'pure','q':'60','global':'full','states':{},'vertices':{}}})
+        key=digest([0]);context=json.dumps(['all','pure','60','overview',''],separators=(',',':'))
+        self.a['contexts'][context]=key
+        for metric in ('euclidean','linf'):
+            f={'profiles':[0],'metric':metric,'coordinateEncoding':'float64-le-base64','coordinates':base64.b64encode(struct.pack('<3d',0,0,0)).decode(),'solver':{'backend':'analytic'},'evaluation':{'profiles':1,'relativeRms':None}}
+            f['receipt']=digest(f);self.a['fits'][key+':'+metric]=f
+        self.seal(self.a);validate(self.a,self.b,self.p,self.s)
     def test_malformed_and_stale_banks(self):
         for change in ('revision','coordinate','missing_metric','missing_subject','wrong_members','missing_context'):
             a=copy.deepcopy(self.a)

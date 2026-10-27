@@ -143,3 +143,9 @@ These focused checks cover routing, duplicate records, participant cache separat
 revision/membership validation and incomplete-bank rejection. They require no
 scientific dataset. The full integration check exercises installed supplements
 when present; it never generates coordinates.
+
+When their coordinate supplements are installed, the integration test also checks
+ZAPPS + PreSSMat and LSVF max-normalized Euclidean/L∞ population, local-selection,
+cohort or assay-subset, participant joint and saved-view routes. It checks that
+method changes preserve samples and assignments. Missing optional banks are
+reported as unavailable; they are never fitted by the test or updater.
