@@ -221,3 +221,9 @@ Local geometries are selected from saved coordinates; no fitting runs in the
 browser. Population overviews and explicit common-reference comparisons keep
 their shared coordinates. Older packages without this supplement remain usable
 and label the fallback as a restricted population embedding.
+
+## Optional developer validation
+
+[On-demand validation](TESTING.md) describes focused checks, the integration
+test, and the separate opt-in saved-layout audit. These tests are not part of
+the update command and are not required for recipients to update VME.

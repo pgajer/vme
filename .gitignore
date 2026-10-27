@@ -66,3 +66,9 @@
 
 !/rank2_feature_graph/test_sample_coloring.mjs
 !/rank2_feature_graph/test_graph_appearance.mjs
+
+!/rank2_feature_graph/verify_http_assets.mjs
+
+!/rank2_feature_graph/audit_saved_layouts.mjs
+
+!/TESTING.md
