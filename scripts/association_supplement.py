@@ -42,6 +42,19 @@ def validate(bank):
                 require(abs(sum(r['expected'] for r in rows) - (cases if mode == 'all' else matched_cases)) < 1e-6, 'expectations do not reconcile')
         for edge in release['edges']:
             require(edge['from'] in nodes and edge['to'] in nodes and edge['from'] != edge['to'], 'unknown endpoint')
+        if 'vertices' in release:
+            vertices = release['vertices']
+            require(len(vertices) == len(nodes) and {v['id'] for v in vertices} == nodes, 'vertex identities differ')
+            require(release['vertexTestFamilySize'] == 2*len(nodes), 'incorrect vertex test family')
+            for vertex in vertices:
+                incident = [e for e in release['edges'] if vertex['id'] in (e['from'], e['to'])]
+                require(len(vertex['incidentEdges']) == len(incident) and set(vertex['incidentEdges']) == {e['id'] for e in incident}, 'incident states differ')
+                for cohort in COHORTS:
+                    for mode in ['all', 'matched']:
+                        # Enrollment states partition participants; their incident union is disjoint.
+                        for key in ['n', 'cases', 'expected']:
+                            require(math.isclose(vertex['results'][cohort][mode][key], sum(e['results'][cohort][mode][key] for e in incident), abs_tol=1e-6), 'vertex union counts differ')
+        for edge in release['edges'] + release.get('vertices', []):
             for cohort in COHORTS:
                 result = edge['results'][cohort]
                 for mode in ['all', 'matched']:

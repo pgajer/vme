@@ -162,3 +162,9 @@ checks exact conditional probabilities and confidence limits. These checks
 remain on demand and are not invoked by the update command.
 
 See [association usage and methods](rank2_feature_graph/ASSOCIATIONS.md).
+
+Vertex association checks are also on demand, outside the update command:
+`python3 -m unittest discover -s rank2_feature_graph -p test_vertex_associations.py`
+(private preparation sources and ledgers). The public `test_associations.mjs`
+includes synthetic vertex unions, separate testing families, both display modes,
+all coverages/cohort choices, and compatibility with edge-only supplements.

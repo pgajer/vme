@@ -48,3 +48,53 @@ console.log('Association schema, population/denominator isolation, all coverages
 // Optional local acceptance: the actual release is never required by public tests.
 const actual=new URL('enrollment_associations.json',import.meta.url);
 if(fs.existsSync(actual)){const real=JSON.parse(fs.readFileSync(actual));ctx.validateAssociationBank(real);assert.equal(Object.values(real.coverages).reduce((n,r)=>n+2*r.edges.length,0),140);console.log('Local saved 140-result supplement also validated.');}
+
+// Vertex extension is optional: old edge-only supplements continue to work.
+vm.runInContext("associationView.level='vertex';renderAssociations()",ctx);
+assert.equal(el('associationLevel').value,'edge');
+assert.match(el('associationVertexAvailability').textContent,/extended association supplement/);
+for(const r of Object.values(bank.coverages)){
+ r.vertices=r.nodes.map(n=>{
+  const incident=r.edges.filter(e=>e.from===n.id||e.to===n.id),v={...n,incidentEdges:incident.map(e=>e.id),results:{}};
+  for(const c of Object.keys(r.cohorts)){
+   v.results[c]={exact:structuredClone(incident[0].results[c].exact)};
+   for(const mode of ['all','matched'])v.results[c][mode]=Object.fromEntries(['n','cases','expected'].map(k=>[k,incident.reduce((sum,e)=>sum+e.results[c][mode][k],0)]));
+   if(n.id==='0')v.results[c].exact={supported:false,sets:0,logOR:null,low:null,high:null,p:null,holm:null,by:null};
+  }
+  return v;
+ });
+ r.vertexTestFamilySize=r.vertices.length*2;
+ r.vertexAnalysis={method:'synthetic'};
+}
+ctx.validateAssociationBank(bank);
+for(const mutate of [b=>b.coverages['90'].vertices.pop(),b=>b.coverages['60'].vertices[0].incidentEdges.pop(),b=>b.coverages['80'].vertices[0].results.ZAPPS.all.n++,b=>b.coverages['70'].vertexTestFamilySize++]){
+ const bad=structuredClone(bank);mutate(bad);assert.throws(()=>ctx.validateAssociationBank(bad));
+}
+const extendedBefore=JSON.stringify(bank);
+for(const q of ['60','70','80','90'])for(const mode of ['matched','all'])for(const cohort of ['both','ZAPPS','PreSSMat']){
+ ctx.q=q;ctx.mode=mode;ctx.cohort=cohort;
+ vm.runInContext("Object.assign(associationView,{coverage:q,mode,cohort,level:'vertex',selected:'0',filter:''});renderAssociations()",ctx);
+ assert.match(el('associationTitle').textContent,/Vertex unions/);
+ assert.match(el('associationGraphs').innerHTML,/class="associationVertex"/);
+ assert(!el('associationGraphs').innerHTML.includes('class="associationEdge"'));
+ assert.match(el('associationGraphs').innerHTML,/stroke="#b6c2c7"/);
+ assert.match(el('associationDetail').textContent,/Union of/);
+ assert.match(el('associationVertexAvailability').textContent,/counts do not sum/);
+ const csv=ctx.associationCSV().split('\r\n');
+ assert.equal(csv.length,1+bank.coverages[q].vertices.length*(cohort==='both'?2:1));
+ assert(csv.every(line=>line.split(',').length===csv[0].split(',').length));
+ if(mode==='matched'){
+  assert.match(el('associationMethod').textContent,new RegExp('separate vertex family of '+bank.coverages[q].vertexTestFamilySize));
+  assert.match(el('associationDetail').textContent,/OR unavailable/);
+ }
+ ctx.associationChoose('1');assert.match(el('associationSelectedTitle').textContent,/Taxon 1/);
+}
+vm.runInContext("associationView.mode='matched';associationView.filter='Taxon_1'.replaceAll('_',' ');renderAssociations()",ctx);
+assert.match(el('associationMethod').textContent,/separate vertex family of 74/);
+assert.equal(JSON.stringify(bank),extendedBefore);
+const verticesActual=new URL('enrollment_associations_vertices_v1.json',import.meta.url);
+if(fs.existsSync(verticesActual)){
+ const real=JSON.parse(fs.readFileSync(verticesActual));ctx.validateAssociationBank(real);
+ console.log('Actual vertex rows validated:',Object.values(real.coverages).reduce((n,r)=>n+2*r.vertices.length,0));
+}
+console.log('Vertex selection, neutral context edges, union denominators, separate corrections, CSV, all coverage/cohort modes and old-supplement compatibility passed.');

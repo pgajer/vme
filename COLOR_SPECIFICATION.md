@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 23 · reviewed 27 October 2026.
+Specification version 24 · reviewed 27 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -454,3 +454,9 @@ matched odds or descriptive observed/expected cases. Gray (#a3abb0) means
 unavailable, not evidence for no association. Edge width is fixed and no
 p-value or size fading is applied. Selection adds a dark outline without
 replacing the effect color. Zero/infinite estimates remain explicit.
+
+In vertex association mode the same scale colors participant unions of incident
+states. Context edges are neutral (#b6c2c7); selected incident edges and the
+selected vertex receive a dark outline. Estimates are computed from union
+membership, not averaged edge effects. Degree controls vertex size in both
+modes. Switching analysis level leaves exploratory colors and coordinates alone.
