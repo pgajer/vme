@@ -540,6 +540,7 @@ function syncSampleAppearanceControls(referenceAvailable=true){
  }
  el('participantShowVertices').disabled=!referenceAvailable;
  el('participantVertexLabelSize').disabled=!referenceAvailable||!participant.showVertices;
+ el('sampleReferenceSpheres').disabled=!referenceAvailable||!participant.showVertices;
  el('sampleReferenceNote').hidden=referenceAvailable;
  el('participantLabelSize').disabled=!active||!participant.showLabels;
  el('participantArrowScale').disabled=!active||!participant.showLines||!participant.showArrows;
@@ -559,7 +560,7 @@ function renderSamplePlot(traces,layout,config){
   });
   if(layout.scene)layout={...layout,scene:{...layout.scene,annotations:annotations.filter(a=>!referenceLabel(a)||participant.showVertices).map(a=>referenceLabel(a)?{...a,font:{...a.font,size:participant.vertexLabelSize}}:a)}};
  }
- return Plotly.react('samples',traces,layout,config);
+ return Plotly.react('samples',sampleReferenceSphereTraces(traces,layout),layout,config);
 }
 function participantVertexAnnotations(){
  if(!participant.showVertices)return [];
@@ -657,7 +658,7 @@ async function participantSamples(){
  renderStateColors(stateColors);
  el('endpointChoices').hidden=true;renderParticipantSequence(rows);renderParticipantComposition(rows);syncParticipantControls();
  const axis=k=>({visible:false,range:[ranges[k][0]-span*.03,ranges[k][1]+span*.03],autorange:false});
- return Plotly.react('samples',traces,{margin:{l:0,r:0,t:0,b:0},showlegend:false,uirevision:union?'participant-union-'+scope.context:'participant-reference-'+META.revision,scene:{camera,annotations:union?subjectEmbeddingAnnotations(scope,fit):participantVertexAnnotations(),aspectmode:'data',dragmode:'orbit',xaxis:axis(0),yaxis:axis(1),zaxis:axis(2)}},{responsive:true,scrollZoom:true,displaylogo:false,displayModeBar:false});
+ return renderSamplePlot(traces,{margin:{l:0,r:0,t:0,b:0},showlegend:false,uirevision:union?'participant-union-'+scope.context:'participant-reference-'+META.revision,scene:{camera,annotations:union?subjectEmbeddingAnnotations(scope,fit):participantVertexAnnotations(),aspectmode:'data',dragmode:'orbit',xaxis:axis(0),yaxis:axis(1),zaxis:axis(2)}},{responsive:true,scrollZoom:true,displaylogo:false,displayModeBar:false});
 }
 function installControlHelp(){
  const explanations={
@@ -683,7 +684,7 @@ function installControlHelp(){
   participantSelectedLabelOnly:'Label only the observation selected in the trajectory, visit selector or sample plot.',
   participantShowArrows:'Show arrowheads indicating observation order along visible visit lines.',
   participantEmbeddingMode:'Joint 3D fits all cohort samples assigned to any state occupied by this subject, using full compositions and the main Pure/Merged selection. Full reference retains the earlier embedding. Fits stay fixed across visits and are saved separately.',
-  participantShowVertices:'Show or hide reference diamonds and their labels together. Ordinary sample points at the same compositions remain visible.',
+  participantShowVertices:'Show or hide reference markers and their labels together. Ordinary sample points at the same compositions remain visible.',
   participantVertexLabelSize:'Size of reference taxon labels in the sample plot. Remembered in this browser.',
   participantArrowScale:'100% uses the original arrowhead size, scaled to each visit segment. Remembered in this browser.',
   participantBackgroundSize:'Size of sample points, or background points in Participant mode. Each setting is remembered separately for this dataset.',
@@ -743,6 +744,7 @@ function restoreSampleAppearanceLayout(layout){
  }
 }
 function installParticipants(){
+ el('sampleReferenceSpheres').onchange=()=>refreshSamples(pendingSampleCamera||readCamera('samples'));
  el('participantSortTarget').onchange=()=>setParticipantSortTarget(el('participantSortTarget').value);
  el('exportParticipantSwitching').onclick=()=>{
   if(el('exportParticipantSwitching').disabled)return;

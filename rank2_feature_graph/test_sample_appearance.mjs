@@ -5,6 +5,7 @@ const elements=new Map(),saved=new Map(),renders=[];
 const el=id=>{if(!elements.has(id))elements.set(id,{value:'',checked:false,disabled:false,hidden:false,textContent:'',options:[{},{},{}],parentElement:{setAttribute(){}},addEventListener(){},setAttribute(){}});return elements.get(id)};
 const context=vm.createContext({el,syncEmbeddingChoices:()=>{},localStorage:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)},Plotly:{react:(id,traces,layout)=>{renders.push({id,traces,layout});return Promise.resolve()}},readCamera:()=>({eye:{x:1,y:2,z:3}}),pendingSampleCamera:null,refreshSamples:camera=>{context.lastCamera=camera;context.refreshCount=(context.refreshCount||0)+1},BUNDLE_PACK:{participants:{}},META:{id:'fixture'}});
 const run=s=>vm.runInContext(s,context),plain=x=>JSON.parse(JSON.stringify(x));
+vm.runInContext(fs.readFileSync(new URL('view_tools.js',import.meta.url),'utf8'),context);
 vm.runInContext(fs.readFileSync(new URL('participants.js',import.meta.url),'utf8'),context);
 run('installControlHelp=()=>{};syncParticipantControls=()=>syncSampleAppearanceControls();installParticipants()');
 assert.equal(el('participantShowVertices').disabled,false);
@@ -69,3 +70,32 @@ assert.throws(()=>run('validateParticipantView({...participant,sampleOpacity:2},
 assert.throws(()=>run('validateParticipantView({...participant,sampleSize:0},{dataset:{id:"fixture"}})'),/sample point size/);
 assert.throws(()=>run('validateParticipantView({...participant,sampleColors:"yes"},{dataset:{id:"fixture"}})'),/visibility/);
 console.log('PASS: shared reference markers and labels, sample controls, installed events, preserved geometry/markers/camera, participant isolation, persistence and legacy saved settings.');
+// Reference sphere mode does not touch samples, visit markers, counts or camera.
+context.sphereInput=[{type:'scatter3d',meta:{sampleView:'local'},ids:['sample'],x:[0,10],y:[0,10],z:[0,10],marker:{size:2,color:'red'}},
+ {type:'scatter3d',meta:{referenceVertices:true},x:[2,7],y:[3,6],z:[4,5],customdata:['endpoint-vertices:1','endpoint-vertices:2'],hovertext:['first reference','second reference'],marker:{size:8,color:['#123456','#abcdef']},hovertemplate:'%{hovertext}<extra></extra>'}];
+context.sphereLayout={scene:{camera:{eye:{x:1,y:2,z:3}},annotations:[]}};
+const sphereOriginal=JSON.stringify(context.sphereInput);
+run('participant.showVertices=true');el('sampleReferenceSpheres').checked=true;el('sampleReferenceSpheres').onchange();
+assert.deepEqual(context.lastCamera,{eye:{x:1,y:2,z:3}});
+run('renderSamplePlot(sphereInput,sphereLayout,{})');
+const sphereResult=renders.at(-1);assert.equal(sphereResult.traces.length,3);
+assert.deepEqual(sphereResult.traces[0].x,context.sphereInput[0].x);assert.deepEqual(sphereResult.traces[0].ids,['sample']);
+assert.deepEqual(plain(sphereResult.layout),plain(context.sphereLayout));
+assert.equal(sphereResult.layout.scene.camera,context.sphereLayout.scene.camera);
+for(const [i,t] of sphereResult.traces.slice(1).entries()){
+ assert.equal(t.type,'mesh3d');assert.equal(t.meta.referenceVertices,true);assert.equal(t.meta.referenceSphere,true);
+ assert.equal(t.color,context.sphereInput[1].marker.color[i]);assert(t.customdata.every(id=>id===context.sphereInput[1].customdata[i]));assert(t.text.every(text=>text===context.sphereInput[1].hovertext[i]));
+ assert.equal(t.hovertemplate,'%{text}<extra></extra>');assert.equal(t.meta.sampleView,undefined);
+}
+assert.equal(JSON.stringify(context.sphereInput),sphereOriginal);
+run('participant.showVertices=false;renderSamplePlot(sphereInput,sphereLayout,{})');
+assert.equal(renders.at(-1).traces[1].visible,false);assert.equal(el('sampleReferenceSpheres').disabled,true);
+run('participant.showVertices=true;participant.active=true');
+context.visitTrace={meta:{legendRecords:[1]},x:[0,10],y:[0,10],z:[0,10],marker:{size:14}};
+context.referenceLayout={scene:{annotations:[{name:'participant-reference-vertex:1',x:2,y:3,z:4,text:'reference one'},{name:'participant-reference-vertex:2',x:2,y:3,z:4,text:'reference two'}]}};
+run('renderSamplePlot([visitTrace],referenceLayout,{})');
+assert.equal(renders.at(-1).traces.length,2,'Coincident labeled references share a sphere');assert.equal(renders.at(-1).traces[0],context.visitTrace,'Participant visits keep their existing trace');
+assert.equal(renders.at(-1).traces[1].meta.legendRecords,undefined);assert.match(renders.at(-1).traces[1].text[0],/reference one<br>reference two/);
+el('sampleReferenceSpheres').checked=false;run('renderSamplePlot([visitTrace],referenceLayout,{})');assert.equal(renders.at(-1).traces.length,1);
+run('participant.active=false;syncSampleAppearanceControls(false)');assert.equal(el('sampleReferenceSpheres').disabled,true);
+console.log('PASS: reference-only sphere meshes, original colors/hover/identity, hidden references, participant label-only references, coincident deduplication, unchanged visits/cameras/input traces.');

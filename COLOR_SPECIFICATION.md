@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 17 · reviewed 26 October 2026.
+Specification version 18 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -120,6 +120,23 @@ lighting; 2D vector exports preserve the gradients. Existing dataset settings
 receive a one-time migration to spheres, preserving other controls. Subsequent
 choices to turn spheres off are saved and respected on reload. Named views keep
 their recorded appearance; older named views without this setting remain flat.
+
+## Sample-view reference spheres
+
+**Sample appearance → Reference vertices → Sphere vertices** optionally draws
+reference markers as illuminated spheres. This setting starts off, is independent
+of graph sphere mode, and persists per dataset and in named views. Older saved
+views keep diamonds. **Show reference vertices** controls both markers and labels;
+the sphere checkbox is disabled while references are hidden or unavailable.
+
+Reference spheres retain the reference colors, hover information and coordinates.
+Participant views with reference labels alone gain spheres at those labeled
+locations while enabled. Coincident participant references share one sphere.
+Ordinary samples, participant visits, selection rings, sample counts and embeddings
+retain their existing representations. Sphere radii are the existing marker size
+times 1/600 of the plotted coordinate span, so they grow with zoom. PNG export
+retains the lighting. This control belongs to the main 3D sample panel; the
+separate Li/Lc neighborhood panel keeps its own reference-marker controls.
 
 ## Graph edge thickness
 

@@ -55,7 +55,7 @@ function createDatasetPanelStorage(storage,identity){
 const datasetPanelNativeStorage=(()=>{try{return typeof window==='undefined'?localStorage:window.localStorage}catch{return null}})();
 const datasetPanelStorage=createDatasetPanelStorage(datasetPanelNativeStorage,()=>{try{return activeEmbeddingFamily?.id||META.id}catch{return META.id}});
 let datasetPanelReady=false,datasetPanelRestoring=false,datasetPanelLayout=null,datasetPanelControlDefaults=null,datasetPanelDetailDefaults=null;
-const datasetPanelControlIds=['dimension','vertexLabels','graphVertexColor','graphEdgeColor','graphVertexScale','graphSpheres','graphFadeBySize','graphFadeStrength','graphWidthBySize','graphEdgeWidth','graphWidthStrength','graphDegreeFilter','graphMinimumDegree','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
+const datasetPanelControlIds=['dimension','vertexLabels','graphVertexColor','graphEdgeColor','graphVertexScale','graphSpheres','sampleReferenceSpheres','graphFadeBySize','graphFadeStrength','graphWidthBySize','graphEdgeWidth','graphWidthStrength','graphDegreeFilter','graphMinimumDegree','graphScope','sampleEmbedding','sampleColorScheme','scope','catalogueSelectedOnly','search','trajectoryImageFormat','trajectoryImageScale'];
 function panelReadJson(key,fallback){try{return JSON.parse(datasetPanelStorage.getItem(key))??fallback}catch{return fallback}}
 function panelControlSnapshot(){return Object.fromEntries(datasetPanelControlIds.map(id=>[id,el(id).type==='checkbox'?el(id).checked:el(id).value]))}
 function saveDatasetPanelSettings(){
@@ -92,6 +92,7 @@ function restoreDatasetPanelSettings(){
   }
   // Clamp legacy strengths to the current slider range; preserve saved on/off choices.
   setGraphFadeStrength(valid&&saved.controls?.graphFadeStrength!==undefined?saved.controls.graphFadeStrength:valid&&saved.controls?.graphFadeBySize===true ? .25 : .1);
+  el('sampleReferenceSpheres').checked=valid&&saved.controls?.sampleReferenceSpheres===true;
   // Migrate the former off default once, then respect subsequent user choices.
   el('graphSpheres').checked=!(valid&&saved.graphSpheresDefaultVersion===1&&saved.controls?.graphSpheres===false);
   setGraphVertexScale(valid?saved.controls?.graphVertexScale:undefined);

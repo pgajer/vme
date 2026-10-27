@@ -140,6 +140,40 @@ function graphSphereTraces(g,lookup,degrees,fade){
    customdata:points.map(()=>'vertex:'+n.id),text:points.map(()=>esc(graphNodeHover(n,degrees.get(n.id))).replaceAll('\n','<br>')),hovertemplate:'%{text}<extra></extra>',showlegend:false};
  });
 }
+// Only reference markers become meshes; observation and selection traces stay intact.
+function sampleReferenceSphereTraces(traces,layout){
+ if(el('sampleReferenceSpheres')?.checked!==true||!participant.showVertices)return traces;
+ const references=traces.filter(t=>t.meta?.referenceVertices),extra=[];
+ if(!references.length){
+  // Participant views historically show reference labels without separate diamonds.
+  const groups=new Map();
+  for(const a of layout.scene?.annotations||[]){
+   if(!String(a.name||'').startsWith('participant-reference-vertex:')||![a.x,a.y,a.z].every(Number.isFinite))continue;
+   const key=JSON.stringify([a.x,a.y,a.z]);if(!groups.has(key))groups.set(key,{a,labels:[]});groups.get(key).labels.push(a.text);
+  }
+  for(const {a,labels} of groups.values())extra.push({meta:{referenceVertices:true},x:[a.x],y:[a.y],z:[a.z],text:[labels.join('<br>')],marker:{size:8,color:'#24414c'},showlegend:false});
+ }
+ const all=[...traces,...extra],lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
+ for(const t of all)for(const [j,axis] of ['x','y','z'].entries())for(const v of t[axis]||[])if(Number.isFinite(v)){lo[j]=Math.min(lo[j],v);hi[j]=Math.max(hi[j],v)}
+ const span=Math.max(...hi.map((v,j)=>v-lo[j])),unit=(Number.isFinite(span)&&span>0?span:1)/600,mesh=graphSphereMesh;
+ const at=(v,i,fallback)=>Array.isArray(v)?v[i]??fallback:v??fallback;
+ return all.flatMap(t=>{
+  if(!t.meta?.referenceVertices||t.visible===false||t.visible==='legendonly'||!t.x?.length)return [t];
+  const result=[];
+  for(let n=0;n<t.x.length;n++){
+   const center=[t.x[n],t.y?.[n],t.z?.[n]];if(!center.every(Number.isFinite))continue;
+   const radius=at(t.marker?.size,n,8)*unit,points=mesh.points.map(p=>p.map((v,j)=>center[j]+radius*v)),hover=at(t.hovertext,n,at(t.text,n,t.name||'Reference vertex'));
+   result.push({type:'mesh3d',meta:{...t.meta,referenceSphere:true},x:points.map(p=>p[0]),y:points.map(p=>p[1]),z:points.map(p=>p[2]),i:mesh.i,j:mesh.j,k:mesh.k,
+    color:at(t.marker?.color,n,'#24414c'),opacity:(t.opacity??1)*at(t.marker?.opacity,n,1),flatshading:false,
+    lighting:{ambient:.35,diffuse:.8,specular:.55,roughness:.25,fresnel:.15},lightposition:{x:100000,y:200000,z:300000},
+    name:t.name,legendgroup:t.legendgroup,showlegend:n===0&&(t.showlegend??layout.showlegend===true),
+    customdata:points.map(()=>at(t.customdata,n,null)),text:points.map(()=>hover),hoverinfo:t.hoverinfo,
+    hovertemplate:(t.hovertemplate||'%{text}<extra></extra>').replaceAll('%{hovertext}','%{text}')});
+  }
+  if(t.mode?.includes('text'))result.push({...t,mode:'text',showlegend:false,hoverinfo:'skip'});
+  return result;
+ });
+}
 function graphSphereGradients(svg){
  if(!graphSpheresEnabled())return;
  const defs=node('defs',{},svg);
