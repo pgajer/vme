@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 16 · reviewed 26 October 2026.
+Specification version 17 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -103,7 +103,7 @@ and persists per dataset and in named views. Older settings use 100%.
 
 ## Sphere vertices
 
-**Sphere vertices** is off by default and is saved per dataset and in named
+**Sphere vertices** is on by default and is saved per dataset and in named
 views. In 2D it applies spherical shading to the existing circles; in 3D it
 replaces flat dots with illuminated triangle-mesh spheres. The selected base
 color, orange selection highlight and state-size opacity still apply. Lighting
@@ -116,7 +116,10 @@ it does not grow when only a subset of vertices is displayed. Unlike flat
 screen-sized dots, the 3D spheres have coordinate-unit radii and grow with zoom.
 Projected gaps, label offsets and picking follow their apparent size. Embedding
 coordinates, memberships and counts are unchanged. PNG exports preserve the
-lighting; 2D vector exports preserve the gradients. Older saved views remain flat.
+lighting; 2D vector exports preserve the gradients. Existing dataset settings
+receive a one-time migration to spheres, preserving other controls. Subsequent
+choices to turn spheres off are saved and respected on reload. Named views keep
+their recorded appearance; older named views without this setting remain flat.
 
 ## Graph edge thickness
 
