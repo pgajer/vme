@@ -190,12 +190,22 @@ function mountAssociationGraphControls(active){
   el('associationGraphs').replaceChildren();state.rendered.clear();++state.revision;requestAnimationFrame(()=>{if(!associationView.active)graph()});
  }
 }
+async function resetAssociationGraphView(){
+ associationGraphState.cameras.clear();
+ for(const cohort of ['ZAPPS','PreSSMat']){
+  const plot=el('associationPlot'+cohort),saved=associationGraphState.rendered.get(cohort);if(!plot||!saved)continue;
+  // Plotly rejects Cartesian-axis updates on a scene-only 3D graph.
+  const update=saved.dimension===3?{'scene.camera':JSON.parse(JSON.stringify(defaultCamera))}:{'xaxis.autorange':true,'yaxis.autorange':true};
+  await Plotly.relayout(plot,update);
+ }
+ return renderAssociationGraphs();
+}
 function installAssociationGraphs(){
  if(!el('associationGraphs')?.insertAdjacentHTML)return;
  const graphs=el('associationGraphs'),wrapper=document.createElement('div');wrapper.id='associationGraphWorkspace';graphs.before(wrapper);wrapper.append(graphs);
  wrapper.insertAdjacentHTML('beforeend',`<aside id="associationGraphSidebar"><h3>Graph display</h3><small id="associationGraphSummary"></small><label><input id="associationEffectColors" type="checkbox" checked> Association colors</label><small>Colors show effect estimates, not significance. Base vertex/edge color applies when its association overlay is off. Fading can make small states hard to see.</small><div id="associationGraphControls"></div><button id="associationGraphReset" type="button">Reset graph view</button><button id="associationGraphRetry" type="button" hidden>Retry embedding</button><small id="associationGraphFitStatus" role="status"></small><small>Saved reference coordinates, participant density and top-3 faces are not supplied by the enrollment analysis. Available layouts use its own graph; both cohorts share the layout. R methods use supplied layouts when available; other settings need the local R graph service. Spring preview works without R.</small></aside>`);
  el('associationEffectColors').onchange=()=>{associationGraphState.effectColors=el('associationEffectColors').checked;renderAssociations()};
- el('associationGraphReset').onclick=()=>{associationGraphState.cameras.clear();for(const cohort of ['ZAPPS','PreSSMat']){const plot=el('associationPlot'+cohort);if(plot){Plotly.relayout(plot,{'scene.camera':defaultCamera,'xaxis.autorange':true,'yaxis.autorange':true})}}renderAssociationGraphs()};
+ el('associationGraphReset').onclick=resetAssociationGraphView;
  el('associationGraphRetry').onclick=()=>{for(const [k,v] of associationGraphState.jobs)if(v.error)associationGraphState.jobs.delete(k);renderAssociationGraphs()};
  const style=document.createElement('style');style.textContent=`#associationGraphWorkspace{display:grid;grid-template-columns:minmax(0,1fr) 235px;gap:12px}#associationGraphSidebar{border:1px solid #cbd8de;padding:12px;max-height:720px;overflow:auto}#associationGraphSidebar small{display:block;margin:6px 0;font-size:12px}#associationGraphSidebar label{display:block;margin:8px 0}#associationGraphSidebar select{max-width:100%}#associationGraphs{grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));align-items:start}.associationGraphCard header{display:flex;gap:4px;align-items:center;padding:8px}.associationGraphCard header h3{margin:0 auto 0 0}.associationGraphCard header button{font-size:11px;padding:4px}.associationGraphPane{position:relative;height:430px}.associationPlot{height:100%;width:100%}.associationGraphLabels{position:absolute;inset:0;pointer-events:none;overflow:hidden}.associationGraphLabels svg{position:absolute;inset:0;max-height:none}.associationVertexLabel{position:absolute;pointer-events:auto;border:0;background:rgba(255,255,255,.85);padding:0;color:#183743;text-align:center;line-height:1;font-family:Arial,sans-serif;white-space:nowrap}.associationVertexLabel:hover{background:#edf4f5;outline:1px solid #607d8b}.associationLabelStatus{display:block;padding:4px 8px;font-size:11px}.associationGraphExpanded{position:fixed;inset:20px;z-index:1000;background:white;display:flex;flex-direction:column;box-shadow:0 0 0 25px #0007}.associationGraphExpanded .associationGraphPane{flex:1;min-height:0}.associationPNG{display:block;padding:6px}.associationPNG[hidden]{display:none}@media(max-width:900px){#associationGraphWorkspace{grid-template-columns:minmax(0,1fr)}#associationGraphSidebar{max-height:400px}}`;document.head.append(style);
 }

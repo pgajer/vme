@@ -49,3 +49,10 @@ assert.equal(ctx.associationValidateGraphFit(valid,body),valid);
 run("associationGraphState.fits.clear();associationView.bank.graphLayouts={}");ctx.key=ctx.associationGraphKey(r,3);ctx.fit=valid;run('associationView.bank.graphLayouts[key]=fit');assert(ctx.associationGraphFit(r,3).packaged);assert.equal(requests.length,1,'Portable supplied layouts do not call the R service');
 assert.equal(JSON.stringify(r),original,'Appearance, fitting and filtering never mutate result rows');
 console.log('PASS: enrollment-only layout inputs, pooled styling, shared appearance formulas, 2D/3D spheres, effect overrides, filters, geometry stability, serial fit deduplication and portable layouts.');
+
+ctx.defaultCamera={eye:{x:1.25,y:1.25,z:1.25},up:{x:0,y:0,z:1},center:{x:0,y:0,z:0}};
+const resets=[];ctx.Plotly={relayout:async(plot,update)=>resets.push(plain(update))};
+run("associationGraphState.rendered.set('ZAPPS',{dimension:3});associationGraphState.rendered.set('PreSSMat',{dimension:2})");
+await ctx.resetAssociationGraphView();
+assert.deepEqual(resets,[{'scene.camera':ctx.defaultCamera},{'xaxis.autorange':true,'yaxis.autorange':true}]);
+console.log('PASS: graph reset updates only the axes/camera present in each dimension.');
