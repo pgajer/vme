@@ -168,3 +168,9 @@ Vertex association checks are also on demand, outside the update command:
 (private preparation sources and ledgers). The public `test_associations.mjs`
 includes synthetic vertex unions, separate testing families, both display modes,
 all coverages/cohort choices, and compatibility with edge-only supplements.
+
+Run `node rank2_feature_graph/test_association_graphs.mjs` on demand after changes
+to enrollment graph controls, layout inputs or appearance. It checks synthetic
+2D/3D rendering inputs, shared style formulas, enrollment isolation, filters,
+serial job deduplication and portable saved fits. Browser checks additionally
+exercise toolbar return, cohort layouts, labels, cameras and PNG downloads.

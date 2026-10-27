@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 24 · reviewed 27 October 2026.
+Specification version 25 · reviewed 27 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -451,12 +451,20 @@ recolors the exploratory all-visit graph. Both cohorts share a diverging
 log2-ratio scale: blue (#2166ac) below one, neutral (#dee2e4) at one, red
 (#b2182b) above one, saturated at ratios 1/8 and 8. The ratio is explicitly
 matched odds or descriptive observed/expected cases. Gray (#a3abb0) means
-unavailable, not evidence for no association. Edge width is fixed and no
-p-value or size fading is applied. Selection adds a dark outline without
+unavailable, not evidence for no association. Width and size fading use the main graph controls, with pooled enrollment
+state counts shared across cohorts. No p-value fading is applied. Selection adds a dark outline without
 replacing the effect color. Zero/infinite estimates remain explicit.
 
 In vertex association mode the same scale colors participant unions of incident
-states. Context edges are neutral (#b6c2c7); selected incident edges and the
+states. Context edges use the chosen base edge color; selected incident edges and the
 selected vertex receive a dark outline. Estimates are computed from union
 membership, not averaged edge effects. Degree controls vertex size in both
 modes. Switching analysis level leaves exploratory colors and coordinates alone.
+
+The association workspace reuses the main graph toolbar and its saved appearance
+settings. Effect colors override vertex color in vertex mode or edge color in
+edge mode. The corresponding base-color control is disabled while the overlay
+is on; unchecking Association colors restores both base colors. Selection uses
+a dark outline rather than overwriting effects. Lighting affects perceived sphere
+colors as in the main panel. Size fading can obscure small states; the unfaded
+results table and common color legend remain available.

@@ -196,6 +196,7 @@ function setGraphProportionStrength(value,persist=false){
 }
 function cancelGraphStrengthUpdate(){if(graphStrengthTimer!==null){clearTimeout(graphStrengthTimer);graphStrengthTimer=null}}
 function redrawGraphLayout(){
+ if(typeof window!=='undefined'&&window.VME_ASSOCIATIONS_INSTALLED&&associationView.active){renderAssociationGraphs();return}
  const camera=pendingGraphCamera||readCamera('graph3d'),panZoom={...transform};
  positions();transform=panZoom;graph(camera);
 }

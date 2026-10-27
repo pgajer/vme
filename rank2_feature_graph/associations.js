@@ -67,6 +67,7 @@ function syncAssociations(){
  el('associationAvailability').textContent=error||(!supported?'Enrollment association results are available for ZAPPS & PreSSMat.':!associationView.bank?'Load the separately supplied enrollment association supplement.':'One approved enrollment specimen per woman. Original study case designations.');
  document.body.classList.toggle('associationActive',associationView.active);
  el('associationWorkspace').hidden=!associationView.active;el('associationOptions').hidden=!associationView.active;
+ if(typeof mountAssociationGraphControls==='function')mountAssociationGraphControls(associationView.active);
  if(associationView.active)renderAssociations();
  else if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
 }
@@ -112,8 +113,10 @@ function renderAssociations(){
  const selected=items.find(e=>e.id===associationView.selected);
  el('associationTitle').textContent=`Enrollment associations · ${r.coverage}% merged 2-CSTs · ${vertexMode?'Vertex unions':'Edges'}`;
  el('associationScope').textContent=`Frozen pooled-enrollment reference · ${r.edges.length} states · core coverage ${associationNumber(r.actualCoverage)}% · all ${Object.values(r.cohorts).reduce((s,p)=>s+p.n,0).toLocaleString()} women assigned. Outcome: original study sPTB case designation. This is a selected case–control sample, not population pregnancy risk. The exploration cohort, coverage and sample filters do not apply here.`;
- el('associationGraphs').innerHTML=cohorts.map(c=>associationGraph(r,c)).join('');
- el('associationScale').innerHTML=`<span class="associationGradient"></span> Blue: ${matched?'lower odds':'fewer cases than expected'} · midpoint: ${matched?'OR = 1':'O/E = 1'} · red: ${matched?'higher odds':'more cases than expected'}. Same scale in both cohorts, saturated at ≤1/8 and ≥8. Colors show estimates, not statistical significance. Gray: unavailable. ${vertexMode?'Vertex colors show incident-state union effects; edges are neutral context. Selected incident edges are outlined.':'Edge colors show state effects.'} Fixed edge width; vertex size grows with degree. Positions are a schematic, not an embedding.`;
+ if(typeof renderAssociationGraphs==='function')renderAssociationGraphs();
+ else el('associationGraphs').innerHTML=cohorts.map(c=>associationGraph(r,c)).join('');
+ el('associationScale').innerHTML=`<span class="associationGradient"></span> Blue: ${matched?'lower odds':'fewer cases than expected'} · midpoint: ${matched?'OR = 1':'O/E = 1'} · red: ${matched?'higher odds':'more cases than expected'}. Same scale in both cohorts, saturated at ≤1/8 and ≥8. Colors show estimates, not statistical significance. Gray: unavailable. ${vertexMode?'Vertex colors show incident-state union effects; edges are neutral context. Selected incident edges are outlined.':'Edge colors show state effects.'} Graph display controls match the main 2-CST panel. Sizes and fading use pooled enrollment counts; graph filters never change the tests.`;
+ if(typeof associationGraphState!=='undefined'&&!associationGraphState.effectColors)el('associationScale').textContent='Association colors are off. Base vertex and edge colors apply; statistical estimates remain in the table and cohort comparison.';
  el('associationSelectedTitle').textContent=selected.name.replaceAll('_',' ');
  el('associationComparison').innerHTML=associationForest(selected,cohorts);
  const rows=associationRows(r,cohorts,associationView.filter);
@@ -157,5 +160,6 @@ function installAssociations(){
   catch(e){el('associationAvailability').textContent=e.message}finally{el('associationFile').value=''}
  };
  el('associationExport').onclick=()=>{const url=URL.createObjectURL(new Blob([associationCSV()],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=`vme-enrollment-associations-${associationView.coverage}-${associationView.level}-${associationView.mode}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)};
+ if(typeof installAssociationGraphs==='function')installAssociationGraphs();
  window.VME_ASSOCIATIONS_INSTALLED=true;syncAssociations();
 }

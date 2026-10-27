@@ -13,8 +13,8 @@ function exportScene(plot){
  }
  return result;
 }
-function graphScreenPoint(point){
- const scene=el('graph3d')._fullLayout?.scene?._scene,params=scene?.glplot?.cameraParams;
+function graphScreenPoint(point,plot=el('graph3d')){
+ const scene=plot._fullLayout?.scene?._scene,params=scene?.glplot?.cameraParams;
  if(!params||!scene.container?.getBoundingClientRect)return null;
  let v=[...point.map((x,i)=>x*scene.dataScale[i]),1];
  for(const name of ['model','view','projection']){const m=params[name];v=[0,1,2,3].map(j=>v.reduce((sum,x,i)=>sum+m[4*i+j]*x,0))}
@@ -170,14 +170,14 @@ async function updateSphereLighting(panel){
  (plot.data||[]).forEach((t,i)=>{if(panel==='graph'?t.meta?.graphSphere!==undefined:t.meta?.referenceSphere)indices.push(i)});
  if(indices.length)await Plotly.restyle(plot,{lighting:[vertexSphereLighting(panel)]},indices);
 }
-function graphSphereTraces(g,lookup,degrees,fade){
+function graphSphereTraces(g,lookup,degrees,fade,style={}){
  const unit=graphSphereUnit(lookup),mesh=graphSphereMesh;
  return g.nodes.map(n=>{
   const center=lookup.get(n.id),radius=graphNodeSize(degrees.get(n.id))*unit,points=mesh.points.map(p=>p.map((v,j)=>center[j]+radius*v));
   return {type:'mesh3d',meta:{graphSphere:n.id},x:points.map(p=>p[0]),y:points.map(p=>p[1]),z:points.map(p=>p[2]),i:mesh.i,j:mesh.j,k:mesh.k,
-   color:graphVertexColor(n.id===selectedVertex||rank3.enabled&&n.id===rank3.vertex),opacity:fade.node(n.id),flatshading:false,
+   color:style.color?style.color(n):graphVertexColor(n.id===selectedVertex||rank3.enabled&&n.id===rank3.vertex),opacity:fade.node(n.id),flatshading:false,
    lighting:vertexSphereLighting('graph'),lightposition:{x:100000,y:200000,z:300000},
-   customdata:points.map(()=>'vertex:'+n.id),text:points.map(()=>esc(graphNodeHover(n,degrees.get(n.id))).replaceAll('\n','<br>')),hovertemplate:'%{text}<extra></extra>',showlegend:false};
+   customdata:points.map(()=>'vertex:'+n.id),text:points.map(()=>style.hover?style.hover(n):esc(graphNodeHover(n,degrees.get(n.id))).replaceAll('\n','<br>')),hovertemplate:'%{text}<extra></extra>',showlegend:false};
  });
 }
 // Only reference markers become meshes; observation and selection traces stay intact.

@@ -24,11 +24,13 @@ prevalence or individual risk. Cohorts are displayed separately, never pooled.
 - **Observed / expected cases:** all approved women in each cohort. Expected = state women × cohort case
   fraction. This is descriptive, with no hypothesis test or confidence interval.
 
-The graph uses the matching saved edges and a schematic circular layout, not
-MDS coordinates. Both cohorts use the same log-ratio color scale: blue below 1,
+The graph uses the matching enrollment edges, with 2D/3D layouts controlled by
+the same toolbar as the main graph. Both cohorts share positions. Both cohorts use the same log-ratio color scale: blue below 1,
 red above 1, neutral at 1, saturated at 1/8 and 8. Gray means unavailable.
-Edges have fixed widths; vertex area grows with degree. No edge is hidden by
-p-value or state size. Click an edge or a table state name for its cohort
+Vertex area grows with displayed degree. Edge width and fading use pooled
+enrollment state counts; the main panel's controls adjust their strength. No
+edge is filtered by p-value. Size fading and degree filtering can hide small
+states visually, but never change tests, table rows or correction families. Click an edge or a table state name for its cohort
 comparison. Empty cohort states remain visible. Counts always use the named
 analysis population, even while the table is filtered. State pair names do not
 imply those taxa dominate every absorbed sample.
@@ -67,10 +69,11 @@ The CSV identifies the association level and all incident state IDs.
 ## Distribution
 
 Software sources contain no study-result payload. The private development build
-accepts `--association-supplement PATH` (default `enrollment_associations_vertices_v1.json` when installed, otherwise
+accepts `--association-supplement PATH` (default `enrollment_associations_graphs_v1.json` when installed, then
+`enrollment_associations_vertices_v1.json`, otherwise
 `enrollment_associations.json`).
 It validates and packages aggregate results into immutable assets loaded with
-the owning dataset. No fitting runs during build, update or interaction.
+the owning dataset. No statistical fitting runs during build, update or interaction. Display-only graph fitting is described below.
 
 Shared installations can use **Load association supplement…** with the supplied
 JSON. This loads results for the current browser session; it does not upload the
@@ -79,7 +82,7 @@ of the installation's metadata (preserving every existing supplement):
 
 ```sh
 python3 scripts/association_supplement.py \
-  --supplement /path/to/enrollment_associations_vertices_v1.json \
+  --supplement /path/to/enrollment_associations_graphs_v1.json \
   --metadata /path/to/current-metadata.json \
   --output /path/to/metadata-with-associations.json
 python3 scripts/portable.py update --metadata /path/to/metadata-with-associations.json
@@ -139,3 +142,34 @@ Vertex checks independently enumerate small matched-set nulls, verify reciprocal
 complementary estimates, confidence-tail probabilities, duplicate suppression,
 union counts, and correction families. The local release checks reproduce every
 saved edge result before accepting vertex results.
+
+## Shared graph controls and layout methods
+
+The actual main graph toolbar moves into the association workspace while it is
+open and returns when exploration resumes. Dimension, edge targets, embedding
+method, vertex size, sphere rendering and lighting, base colors, label size,
+edge width and scaling, fading, degree filtering and incident-edge scope retain
+their existing ranges and formulas. Appearance settings remain shared with the
+main panel. Enrollment selections and scientific results remain separate.
+
+Layouts always use pooled approved enrollment counts, not outcomes or the
+currently selected cohort. Equal targets are 1; proportion targets are
+`1 + strength × state count / largest state count`. The same local R service
+provides SGD metric MDS, GRIP and weighted GRIP. Requests identify the enrollment
+graph and partition, preventing reuse of all-visit graph fits. Fits are queued
+serially. A clearly labeled spring preview is shown while fitting, or if the
+service is unavailable; it is never labeled as a completed R fit.
+
+The extended graph supplement supplies all four coverages, both dimensions,
+and all three R methods for equal targets and default proportion strength 4.
+Other proportion strengths need the local R service; Spring preview remains
+available without it. `prepare_association_graphs.py` produces these display-only
+layouts serially and preserves every original statistical result. The frozen
+release has no saved reference graph coordinates or enrollment top-3/participant
+visualization payload, so those choices are unavailable here.
+
+Graph labels reuse the main panel's collision-avoidance algorithm and select
+exact vertices. Each cohort graph can be maximized and exported as a PNG.
+Dragging/zooming changes the view, never the association calculation.
+
+Additional on-demand check: `node rank2_feature_graph/test_association_graphs.mjs`.
