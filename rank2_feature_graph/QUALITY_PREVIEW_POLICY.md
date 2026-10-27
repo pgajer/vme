@@ -181,7 +181,7 @@ and never suppresses or relocates a square.
 
 ## Assignment-support rules
 
-Checks use the existing saved evidence at the current reference-core target.
+Checks use the existing saved evidence at the current Largest 2-CSTs coverage setting.
 They do not recompute neighbors, votes, bridges or ties.
 
 | Scope | Flag / unavailable check |

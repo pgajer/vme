@@ -84,7 +84,7 @@ function familyColorModel(hood,selection){
    return 'G'+(m.cores.indexOf(id)+1)+': '+label;
   });
   colors=states.map(id=>edgeColor(id,custom,order));legendKeys=states;
-  note=`Merged top-2 CST groups · ${coverage}% reference core target (${Number(m.referenceCoreCoverage).toFixed(2)}% achieved). Frozen assignments cover all ${a.records.length.toLocaleString()} source records; core names need not be the leading taxa of absorbed samples. All neighborhood compositions remain plotted.`;
+  note=`Merged top-2 CST groups · Largest 2-CSTs coverage: ${coverage}% (${Number(m.referenceCoreCoverage).toFixed(2)}% achieved). Frozen assignments cover all ${a.records.length.toLocaleString()} source records; core names need not be the leading taxa of absorbed samples. All neighborhood compositions remain plotted.`;
   if(mode==='dominance2'){
    const parents=states,split=parents.map((id,i)=>familyDominance(bundle,hood.profileIndices[i],id));
    states=split.map(d=>d.state);legendKeys=states;
@@ -94,7 +94,7 @@ function familyColorModel(hood,selection){
     return 'G'+(m.cores.indexOf(parents[i])+1)+': '+(d.side===null?names.join(' = ')+' — equal-abundance boundary':names[d.side]+' > '+names[1-d.side]);
    });
    colors=split.map((d,i)=>d.singleton?colors[i]:familyDominanceColor(colors[i],d.side));
-   note=`Assigned-pair abundance order within merged top-2 CST groups · ${coverage}% reference core target (${Number(m.referenceCoreCoverage).toFixed(2)}% achieved). Compare the two assigned core taxa using full-precision whole-sample abundances, not the sample's own leading pair. Dark/light shades distinguish the two dominance regions. Exact equality (including both absent) is a gray boundary, not a third dominance state. One-taxon compatibility groups remain unsplit. All neighborhood compositions remain plotted.`;
+   note=`Assigned-pair abundance order within merged top-2 CST groups · Largest 2-CSTs coverage: ${coverage}% (${Number(m.referenceCoreCoverage).toFixed(2)}% achieved). Compare the two assigned core taxa using full-precision whole-sample abundances, not the sample's own leading pair. Dark/light shades distinguish the two dominance regions. Exact equality (including both absent) is a gray boundary, not a third dominance state. One-taxon compatibility groups remain unsplit. All neighborhood compositions remain plotted.`;
   }
  }else{
   const {base,rows,N}=familyReferenceStates(bundle),retained=rank3Retained(rows,N,'coverage',Number(coverage)),keep=new Set(retained.map(r=>r.id));
@@ -195,7 +195,7 @@ function familyVertexModel(hood,selection){
   if(!anchor){omitted.push(feature);continue}
   vertices.push({feature,index:anchor.index,profileId:hood.profileIds[anchor.index],label:taxonDisplayLabel(b.featureNames[feature]),maximum:anchor.value*100,ties:anchor.ties});
  }
- const note=`${vertices.length} of ${features.length} reference taxa labeled at the ${coverage}% merged top-2 CST core target. `+(scope==='neighborhood'?`Observed maxima within this neighborhood, not full-collection maxima; ${omitted.length} taxa absent. Exact ties use frozen collection row order.`:`Full-collection reference samples; ${omitted.length} lie outside this neighborhood and are not projected.`)+' Labels show maximum whole-sample abundance. Coordinates and membership are unchanged.';
+ const note=`${vertices.length} of ${features.length} reference taxa labeled at Largest 2-CSTs coverage: ${coverage}%. `+(scope==='neighborhood'?`Observed maxima within this neighborhood, not full-collection maxima; ${omitted.length} taxa absent. Exact ties use frozen collection row order.`:`Full-collection reference samples; ${omitted.length} lie outside this neighborhood and are not projected.`)+' Labels show maximum whole-sample abundance. Coordinates and membership are unchanged.';
  return {scope,coverage,vertices,omitted,note,reference};
 }
 function familyLabelOffsetKey(key,scope,feature,profileId){return JSON.stringify([key,scope,feature,profileId])}

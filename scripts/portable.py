@@ -20,7 +20,7 @@ HERE = ROOT / 'rank2_feature_graph'
 sys.path.insert(0, str(HERE))
 from viewer_source import assemble_viewer
 from taxon_palette import load_palette
-from resource_pages import source_digest, page as resource_page
+from resource_pages import source_digest, page as resource_page, coverage_terminology
 from policy_document import policy_html
 
 PATTERN = r'<script id="vme-http-manifest" type="application/json">(.*?)</script>'
@@ -265,7 +265,7 @@ def prepare(package, metadata_path, output, announce=True):
     page = ''.join(pieces).replace('<body>', '<body><p id="vmeLoadStatus" role="status" aria-live="polite">Loading dataset…</p><button id="vmeLoadRetry" type="button" hidden>Retry loading</button>', 1)
     (outweb / 'index.html').write_text(page)
     for name in ('about.html', 'portable.html'):
-        shutil.copy2(web / name, outweb / name)
+        (outweb / name).write_text(coverage_terminology((web / name).read_text()))
     (outweb / 'QUALITY_PREVIEW_POLICY.md').write_bytes((HERE / 'QUALITY_PREVIEW_POLICY.md').read_bytes())
     (outweb / 'quality.html').write_text(resource_page('Quality preview rules', policy_html(HERE), 'index.html'))
     # Retain the data-package provenance, clearly separated from the new interface.

@@ -502,7 +502,7 @@ function renderParticipantComposition(rows){
   const details=[participantLabel(r),`Specimen: ${r.specimen}`,`${d.capabilities?.gestationalAge===false?'Collection time':'Collection date (gestational age in weeks)'}: ${dateAge}`,
    `Original top-2 CST pair: ${stateDisplayLabel(original)} (${pairName(original)})`,
    `Assigned merged group: ${merged?participantStateLabel(r)+' ('+pairName(DATA.samples.pair[r.index])+')':'Not applied (Pure states)'}`];
-  if(merged)details.push(`Reference core target: ${el('coverage').value}%. The assigned group's taxa need not dominate this sample.`);
+  if(merged)details.push(`Largest 2-CSTs coverage: ${el('coverage').value}%. The assigned group's taxa need not dominate this sample.`);
   if(elapsed)details.push(`Elapsed day ${timing.days[r.id]}`);
   if(r.order===null)details.push('Visit order unavailable');
   details.push(...r.flags,'Sort taxa by this visit; click again to reverse.');

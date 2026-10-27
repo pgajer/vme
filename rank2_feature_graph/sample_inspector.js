@@ -45,7 +45,7 @@ function updateSampleContext(indices){
  plottedSampleIndices=indices.slice();
  const edge=current().edges.find(e=>e.id===selected),node=current().nodes.find(n=>n.id===selectedVertex);
  const name=edge?`State: ${edge.label} (${edge.key})`:node?`Feature: ${node.label}`:'All displayed states';
- const target=DATA.assignment?`Reference core target: ${el('coverage').value}% (actual ${fmt(DATA.assignment.referenceCoreCoverage)}%)`:`Reference state target: ${el('coverage').value}%`;
+ const target=DATA.assignment?`Largest 2-CSTs coverage: ${el('coverage').value}% (actual ${fmt(DATA.assignment.referenceCoreCoverage)}%)`:`Largest 2-CSTs coverage: ${el('coverage').value}%`;
  const counts=sampleCounts(indices).split(' · ');
  // Source records are the sample-counting unit; compositions and people stay separate.
  const recordSamples=META.observationLabel==='source records';

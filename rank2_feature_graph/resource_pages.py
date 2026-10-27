@@ -22,8 +22,16 @@ DATASET_PRESENTATION = {
 }
 
 
+def coverage_terminology(text):
+    """Update display prose only; underscore/camelCase field names remain intact."""
+    return re.sub(r'\b(?:reference[- ]core|reference state|core) target(s?)\b',
+                  lambda m: ('Largest' if m.group(0)[0].isupper() else 'largest') +
+                  ' 2-CSTs coverage' + (' levels' if m.group(1) else ''), text, flags=re.I)
+
+
 def cst_terminology(text):
     """Render legacy prose without modifying frozen metadata or machine identifiers."""
+    text = coverage_terminology(text)
     text = re.sub(r'\b([1-9][0-9]*|k)-udCST(s?)\b', r'top-\1 CST\2', text)
     text = re.sub(r'\b([1-9][0-9]*|k)-dCST(s?)\b', r'ordered top-\1 CST\2', text)
     return text.replace('rank-2 states', 'top-2 CSTs').replace('Rank-2 states', 'Top-2 CSTs')
@@ -118,7 +126,7 @@ def coverage_section(payload, report, identity=None):
                    f'strength ({len(strengths)} settings, {min(strengths):g}–{max(strengths):g}). '
                    'Saved reference layouts are also available.</p>'
                    '<p>Participant selections count each participant/cohort/episode entry at each supported '
-                   'state mode and reference core target. Participants with the same occupied states may share '
+                   'state mode and largest 2-CSTs coverage. Participants with the same occupied states may share '
                    'a joint embedding. Reference-only means using existing full-reference coordinates, '
                    'rather than a joint embedding fitted to samples in the participant’s occupied states. '
                    'It is an intentional mode, not a missing fit.</p></details>')
@@ -264,7 +272,7 @@ def resource_pages(here, payload, explorer='index.html', *, coverage=None, ident
     # Identify the actual source content, including uncommitted edits, rather than
     # labelling a working-tree build with a potentially stale Git commit alone.
     body = '''<p>Vaginal Microbiome Explorer connects sample compositions, community states and participant observations. The explorer opens directly; this page provides context and dataset documentation.</p>
-<section><h2>Start exploring</h2><p>Select a dataset, then a state or participant. Sample plots show composition geometry; feature graphs organize states by their taxa. Use named views to save the dataset, selection, highlighted background states and camera, or export those views as JSON for another browser with the same dataset release.</p><p>Default startup: UMB HMP when included, Merged groups, 60% reference core target, and weighted GRIP with scaled state-proportion edge lengths. Dataset availability is specific to this local build.</p></section>
+<section><h2>Start exploring</h2><p>Select a dataset, then a state or participant. Sample plots show composition geometry; feature graphs organize states by their taxa. Use named views to save the dataset, selection, highlighted background states and camera, or export those views as JSON for another browser with the same dataset release.</p><p>Default startup: UMB HMP when included, Merged groups, 60% largest 2-CSTs coverage, and weighted GRIP with scaled state-proportion edge lengths. Dataset availability is specific to this local build.</p></section>
 <h2>Datasets included in this build</h2><p>Counts below describe each released representation, before display filters. Records, distinct compositions and participants are different units. Datasets retain their own assay, taxonomy and population definitions; their coordinates are not a shared embedding.</p>
 <div class="datasets">'''+''.join(cards)+'''</div>
 <section id="terminology"><h2>Community-state terminology</h2>
@@ -277,7 +285,7 @@ def resource_pages(here, payload, explorer='index.html', *, coverage=None, ident
 <p><strong>Distinct constructions:</strong> merged groups need not match a sample’s original top-2 CST. “Assigned-pair abundance order” compares an assigned core pair and is not necessarily an ordered top-2 CST. A whole-sample ≥95% vertex is a mass-qualified display state; an ordinary top-1 CST requires only the most abundant taxon.</p></section>
 <section><h2>How to interpret the views</h2><ul>
 <li><strong>Original top-2 CST pair:</strong> the sample’s unordered leading pair of taxa. A single-positive sample may have no pair.</li>
-<li><strong>Assigned merged group:</strong> the reference core receiving a sample under the saved assignment procedure. Its named taxa need not be the sample’s dominant taxa. The reference core target selects cores; merged views retain the selected population.</li>
+<li><strong>Assigned merged group:</strong> the reference core receiving a sample under the saved assignment procedure. Its named taxa need not be the sample’s dominant taxa. The largest 2-CSTs coverage selects cores; merged views retain the selected population.</li>
 <li><strong>Graph geometry:</strong> vertices represent taxa and edges represent pairs. Layout choices include metric MDS, GRIP and weighted GRIP. Equal or scaled proportion-based edge targets are display choices; fitted edge lengths are approximate. Endpoint L2 distance is a full-composition Euclidean distance in percentage points, not the drawn edge length.</li>
 <li><strong>Top-3 CST faces:</strong> triangles represent original leading triples with independent count, percentage and coverage filters. A face may appear even when some of its edges are absent from the selected pair graph.</li>
 <li><strong>Subject trajectories:</strong> observations follow verified visit order or time within a fixed reference. Merged groups are the default where supported, density is off, and ≥95% single-taxon and separately identified within-pair endpoint rules are on. Interval endpoints name taxa; connecting lines do not establish unobserved intermediate states. Visit order spacing does not imply equal elapsed time.</li>

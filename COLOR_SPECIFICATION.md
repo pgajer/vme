@@ -39,10 +39,10 @@ The active legend determines the meaning of color in a particular view.
 The **Color by** selector explicitly chooses sample colors independently of the
 graph mode, selected samples and saved embedding:
 
-- **q% 2-CSTs** uses saved merged assignments at the current reference-core
-  target. The label follows the target (for example, 90% 2-CSTs). This percentage
-  is reference-core coverage, not the abundance of the named pair in each
-  sample. The option is disabled where merged assignments are unavailable.
+- **q% 2-CSTs** uses saved merged assignments at the current **Largest 2-CSTs coverage**
+  setting. The label follows the target (for example, 90% 2-CSTs). This percentage
+  is coverage of the reference samples by the largest pure 2-CSTs, not the
+  abundance of the named pair in each sample. The option is disabled where merged assignments are unavailable.
 - **Pure 2-CSTs** uses original, unmerged leading-pair assignments. “Pure” does
   not imply that only two taxa occur in a sample. This is available within a
   merged group as well as in population and vertex views.
