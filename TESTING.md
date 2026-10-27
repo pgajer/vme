@@ -145,7 +145,8 @@ scientific dataset. The full integration check exercises installed supplements
 when present; it never generates coordinates.
 
 When their coordinate supplements are installed, the integration test also checks
-ZAPPS + PreSSMat and LSVF max-normalized Euclidean/L∞ population, local-selection,
+ZAPPS + PreSSMat, LSVF and HMP+U01 (40-participant panel) max-normalized
+Euclidean/L∞ population, local-selection,
 cohort or assay-subset, participant joint and saved-view routes. It checks that
 method changes preserve samples and assignments. Missing optional banks are
 reported as unavailable; they are never fitted by the test or updater.

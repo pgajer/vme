@@ -318,6 +318,7 @@ assert.deepEqual(hashes(),before,'Core/non-core comparison preserves scientific 
 // Optional new coordinate banks: representative UI routes, not a layout audit.
 for(const fixture of [
  {id:'zapps-pressmat-v4',cohort:'PreSSMat',flag:'zappsMaxNormalized',views:[['all','merged','60','vertex'],['ZAPPS','pure','80','group'],['PreSSMat','merged','100','vertex']]},
+ {id:'umb-hmp-2019-panel',cohort:'UMB-HMP',flag:'hmpPanelMaxNormalized',views:[['all','merged','60','vertex'],['all','pure','80','vertex'],['joint-omics','pure','80','group'],['MT','merged','90','vertex'],['qPCR-positive','merged','100','vertex']]},
  {id:'lsvf-v3v4-20241111',cohort:'LSVF',flag:'lsvfMaxNormalized',views:[['all','merged','60','vertex'],['all','pure','80','vertex'],['metabolite','pure','80','group'],['metabolite+immune','merged','100','vertex']]}
 ]){
  if(!manifest.datasets[fixture.id])continue;

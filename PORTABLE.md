@@ -231,7 +231,8 @@ the update command and are not required for recipients to update VME.
 ## Dataset embedding supplements
 
 The optional `datasetMaxNormalizedEmbeddings` metadata field adds max-normalized
-Euclidean and L∞ methods for ZAPPS + PreSSMat and LSVF. The software repository contains
+Euclidean and L∞ methods for ZAPPS + PreSSMat, LSVF and the HMP+U01
+40-participant panel. The software repository contains
 the viewer and validators; the coordinates remain in separately shared data.
 The matching supplement is checked against the dataset and analysis revisions,
 exact ordinary/participant memberships, coordinate receipts and complete method
@@ -239,8 +240,8 @@ coverage before installation. Existing L1-normalized views remain available.
 
 Choose a method under **Sample view → Sample embedding**. Saved local fits are
 used for selected states and vertex unions, in each cohort, in Pure/Merged mode
-and at all five reference coverage targets. LSVF also includes its recorded
-assay-availability subsets. Participant mode uses a separate
+and at all five reference coverage targets. LSVF and the HMP+U01 panel also
+include their recorded assay-availability subsets. Participant mode uses a separate
 joint-state fit for the chosen method; Full reference uses that method's saved
 population coordinates. Switching methods does not change records or assignments.
 An installation without the matching supplement keeps these methods disabled.
