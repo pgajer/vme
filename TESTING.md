@@ -89,6 +89,30 @@ settings, four participant-view restorations, saved cameras, population
 compatibility, and pure-core/non-core counts. It checks that scientific bundles
 are unchanged. It does **not** scan every saved layout.
 
+## Standalone graph-layout checks
+
+For focused graph-layout, camera, or named-view changes, run on demand:
+
+```sh
+node rank2_feature_graph/verify_graph_layout.mjs "$HOME/vme/web/index.html"
+```
+
+In the development checkout, omitting the argument uses `index.http.html`.
+`EXPLORER_HTML` remains supported, but must name a built HTTP entry; an explicit
+argument takes precedence. The test reads the entry's local, checksum-verified
+application, loader, validator and dataset assets. No HTTP server is required.
+Offline exports and source templates are rejected with an actionable message.
+
+It requires `comb-V3V4-tx` and `comb-V4-tx`, and checks the installed datasets'
+2D/3D spring layouts, equal/proportional targets, whole-reference counts,
+cohort independence, camera preservation, dataset-scoped preferences, named-view
+compatibility and a dense 100% pure-state graph. Portable-coordinate restoration
+uses a context without a supplied R fit. Frozen scientific bundles are hashed
+individually to detect mutation without serializing the entire asset bank.
+
+This is a simulated-browser test, not a WebGL rendering check. It does not run
+an R service, rebuild the app, audit every saved layout, or run during updates.
+
 ## Exhaustive saved-layout audit
 
 Run explicitly when needed:

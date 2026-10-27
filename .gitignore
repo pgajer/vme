@@ -105,3 +105,5 @@
 !/rank2_feature_graph/association_graphs.js
 
 !/rank2_feature_graph/test_association_graphs.mjs
+
+!/rank2_feature_graph/verify_graph_layout.mjs
