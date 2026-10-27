@@ -57,7 +57,7 @@ body.panelMaximized{overflow:hidden}
 .pinCard{flex:0 0 280px;max-width:90%;padding:10px;border:1px solid #bed2d9;border-radius:6px;background:#f5f9fa;overflow-wrap:anywhere}
 .pinCard h3{font-size:13px;margin:0}.pinCard dl{display:grid;grid-template-columns:80px minmax(0,1fr);gap:3px 8px;margin:8px 0}.pinCard dt{color:#466470}.pinCard dd{margin:0}.pinCard table td{padding:3px}.pinCard progress{width:64px;height:8px}
 .assignmentCounts{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.assignmentCounts span{background:#edf4f5;border-radius:4px;padding:6px 9px}.stateBreakdown{max-height:180px;overflow:auto}.stateBreakdown td:first-child{overflow-wrap:anywhere}#mergedComponentTable{margin:8px 0 14px}.mergedComponentActions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0}.mergedComponentActions button{height:24px;padding:2px 7px;line-height:18px;font-size:12px}#mergedComponentTable th button{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;padding:0;text-align:left}#mergedComponentTable .pureUnavailable{color:#607680;font-size:11px}#mergedComponentTable details p{min-width:210px;max-width:360px;white-space:normal}#mergedComponentTable td{vertical-align:top}#mergedComponentTable h3{font-size:14px;margin:6px 0}#mergedComponentTable th,#mergedComponentTable td{padding:4px 6px}#mergedComponentTable input[type=color]{width:34px;height:26px;padding:1px;border:1px solid #9aafb7;cursor:pointer}#selectionPanel.maximized #mergedComponentTable .stateBreakdown{max-height:none}
-.graphToolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px}.graphToolbar select{padding:3px}.graphToolbar input[type=number]{width:48px;padding:3px}#graph3d .annotation-scene,#graph3d .annotation-scene *{pointer-events:none!important}.graphToolbar [hidden]{display:none!important}#featurePanel>.panelHeader{align-items:center;flex-wrap:nowrap}#featurePanel>.panelHeader h2{flex-basis:200px}.graphToolbar label{white-space:normal}
+.graphToolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px}.graphToolbar select{padding:3px}.graphToolbar input[type=number]{width:48px;padding:3px}#graph3d .annotation-text{cursor:pointer}.graphToolbar [hidden]{display:none!important}#featurePanel>.panelHeader{align-items:center;flex-wrap:nowrap}#featurePanel>.panelHeader h2{flex-basis:200px}.graphToolbar label{white-space:normal}
 #samplePanel.maximized #sampleNavigation{display:block;grid-column:1;grid-row:2/4;min-height:0;overflow:auto;margin:0;padding:12px;border:1px solid #c6d6dc;border-radius:8px;background:#e5eff1}
 #sampleNavigation h3{font-size:16px;margin:0 0 10px}
 #panelWorkspace>#samplePanel.maximized{grid-template-columns:220px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:8px 14px}
@@ -409,28 +409,30 @@ function graph3d(camera=null){camera=camera?copyCamera(camera):null;pendingGraph
  if(participant.active)tr.push(...participantGraphMarker(lookup));
  tr.push(...rank3Traces(geometry));
  // Scene annotations are CSS-pixel labels; WebGL trace text can shrink with depth/density.
- const annotations=el('vertexLabels').checked?g.nodes.map((n,i)=>graphNodeLabelVisible(n)?({x:z[i][0],y:z[i][1],z:z[i][2],text:esc(graphNodeLabel(n)),name:'vertex:'+n.id,opacity:fade.node(n.id),showarrow:false,captureevents:false,xanchor:'center',yanchor:'bottom',yshift:graphNodeSize(degrees.get(n.id))+4,font:{...graphLabelFont}}):null).filter(Boolean):[];
+ const annotations=el('vertexLabels').checked?g.nodes.map((n,i)=>graphNodeLabelVisible(n)?({x:z[i][0],y:z[i][1],z:z[i][2],text:esc(graphNodeLabel(n)),name:'vertex:'+n.id,opacity:fade.node(n.id),showarrow:false,captureevents:true,xanchor:'center',yanchor:'bottom',yshift:graphNodeSize(degrees.get(n.id))+4,font:{...graphLabelFont}}):null).filter(Boolean):[];
  await Plotly.react('graph3d',tr,{hoverlabel:{bgcolor:'#ffffff',bordercolor:'#8299a3',font:{...graphLabelFont,color:'#173744'},align:'left'},margin:{l:0,r:0,b:0,t:15},showlegend:false,uirevision:datasetKey()+'-graph3d-'+q,scene:{...(camera?{camera:copyCamera(camera)}:{}),annotations,dragmode:'orbit',aspectmode:'data',xaxis:{visible:false},yaxis:{visible:false},zaxis:{visible:false},...participantGraphScene(lookup)}},{responsive:true,scrollZoom:true,displaylogo:false,displayModeBar:false});
  if(revision===graphRevision&&camera)await Plotly.relayout('graph3d',{'scene.camera':copyCamera(camera)});
  if(revision===graphRevision){await maybeFitSubjectGraph3d(geometry);await trimGraphEdges();pendingGraphCamera=null;}
- if(!bound3d){const target=el('graph3d');let hovered=null,press=null,pickRevision=0,trimPending=false;
+ if(!bound3d){const target=el('graph3d');let hovered=null,press=null,released=null,pickRevision=0,trimPending=false;
  target.on('plotly_relayout',()=>{if(trimPending||graphTrimming)return;trimPending=true;requestAnimationFrame(()=>{trimPending=false;graphQueue=graphQueue.then(trimGraphEdges).catch(console.error)})});
  target.on('plotly_hover',ev=>{const id=ev.points[0]?.customdata;hovered=typeof id==='string'?id:null});target.on('plotly_unhover',()=>hovered=null);
  // Plotly's 3D scene can emit click events on successive frames while a button
  // is held. Collect its first pick, then select once after pointer release.
  // Redrawing from plotly_click itself can change the object under that cursor.
  target.on('plotly_click',ev=>{const id=ev.points[0]?.customdata;if(press&&!press.moved&&!press.pick&&typeof id==='string')press.pick=id});
- target.addEventListener('pointerdown',ev=>{if(ev.button!==0||ev.ctrlKey||ev.altKey||ev.shiftKey||ev.metaKey){press=null;return}press={x:ev.clientX,y:ev.clientY,id:hovered,label:graphLabelAtPointer(ev.clientX,ev.clientY),pointerId:ev.pointerId,moved:false,pick:null,revision:graphRevision,dataset:datasetKey(),token:++pickRevision}},true);
+ target.on('plotly_clickannotation',ev=>{const click=press||released,name=ev.annotation?.name;if(click&&!click.moved&&ev.subplotId==='scene'&&typeof name==='string'&&name.startsWith('vertex:'))click.annotationPick=name});
+ target.addEventListener('pointerdown',ev=>{released=null;if(ev.button!==0||ev.ctrlKey||ev.altKey||ev.shiftKey||ev.metaKey){press=null;return}press={x:ev.clientX,y:ev.clientY,id:hovered,label:graphLabelAtPointer(ev.clientX,ev.clientY,ev.target),pointerId:ev.pointerId,moved:false,pick:null,revision:graphRevision,dataset:datasetKey(),token:++pickRevision}},true);
  target.addEventListener('pointermove',ev=>{if(press&&ev.pointerId===press.pointerId&&Math.hypot(ev.clientX-press.x,ev.clientY-press.y)>=5)press.moved=true},true);
  target.addEventListener('pointerup',ev=>{
   if(!press||ev.pointerId!==press.pointerId)return;const click=press;press=null;
-  if(click.moved||Math.hypot(ev.clientX-click.x,ev.clientY-click.y)>=5)return;
-  const vertex=graphVertexAtPointer(ev.clientX,ev.clientY),label=graphLabelAtPointer(ev.clientX,ev.clientY),id=vertex!==undefined?'vertex:'+vertex:click.label&&click.label===label?label:click.pick||click.id||hovered;
+  if(click.moved||Math.hypot(ev.clientX-click.x,ev.clientY-click.y)>=5)return;released=click;
+  // A label names an exact vertex and takes priority over nearby marker hit areas.
+  const label=graphLabelAtPointer(ev.clientX,ev.clientY,ev.target),vertex=graphVertexAtPointer(ev.clientX,ev.clientY),id=click.label&&click.label===label?label:vertex!==undefined?'vertex:'+vertex:click.pick||click.id||hovered;
   // Yield until Plotly's own mouse-up/camera processing has finished. Ignore
   // delayed picks when navigation or a new gesture has replaced this graph.
-  setTimeout(()=>{if(click.token===pickRevision&&click.revision===graphRevision&&click.dataset===datasetKey()&&el('dimension').value==='3')pickGraphItem(id)},0);
+  setTimeout(()=>{if(click.token===pickRevision&&click.revision===graphRevision&&click.dataset===datasetKey()&&el('dimension').value==='3')pickGraphItem(click.annotationPick||id)},0);
  },true);
- const cancel=()=>{press=null;hovered=null;++pickRevision};
+ const cancel=()=>{press=null;released=null;hovered=null;++pickRevision};
  target.addEventListener('pointercancel',cancel,true);target.addEventListener('pointerleave',cancel,true);bound3d=true}
  }).catch(e=>{el('status').textContent='3D display error: '+e.message;console.error(e)});return graphQueue;
 }

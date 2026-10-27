@@ -132,3 +132,61 @@ for(const ambient of [0,85,100])for(const highlights of [0,18,100]){
  for(const stop of stops)assert(stop['stop-color'].match(/\d+/g).every(v=>Number(v)>=0&&Number(v)<=255));
 }
 console.log('PASS: independent saved lighting defaults, invalid values, sphere-only material updates, unchanged geometry and samples, disabled flat controls and 2D gradient extremes.');
+
+// Exercise the real pointer handlers: a named label must beat a nearby sphere
+// and Plotly's WebGL pick, without turning a rotation gesture into a selection.
+const viewer=fs.readFileSync(new URL('viewer.html',import.meta.url),'utf8');
+const binding=viewer.slice(viewer.indexOf("if(!bound3d){const target=el('graph3d')"),viewer.indexOf("bound3d=true}")+"bound3d=true}".length);
+assert(binding.includes("pointerup"));
+const events=new Map(),timers=[],picks=[];
+let hitLabel='vertex:172',hitVertex=99;
+const pointerContext=vm.createContext({
+ el:id=>id==='graph3d'?{on:(name,fn)=>events.set(name,fn),addEventListener:(name,fn)=>events.set(name,fn)}:{value:'3'},
+ graphLabelAtPointer:()=>hitLabel,graphVertexAtPointer:()=>hitVertex,
+ datasetKey:()=> 'zapps-pressmat-v4',pickGraphItem:id=>picks.push(id),
+ setTimeout:fn=>timers.push(fn),console
+});
+vm.runInContext('let bound3d=false,graphRevision=1;'+binding,pointerContext);
+const fire=(name,extra={})=>events.get(name)({button:0,pointerId:1,clientX:100,clientY:100,...extra});
+const flush=()=>{while(timers.length)timers.shift()()};
+const plotPick=id=>events.get('plotly_click')({points:[{customdata:id}]});
+fire('pointerdown');plotPick('vertex:99');plotPick('vertex:88');fire('pointerup');
+assert.deepEqual(picks,[],'Selection waits for pointer release and camera handling');flush();
+assert.deepEqual(picks,['vertex:172'],'The clicked label overrides nearby markers and WebGL picks exactly once');
+fire('pointerdown');fire('pointermove',{clientX:108});fire('pointerup',{clientX:108});flush();
+assert.equal(picks.length,1,'Dragging from a label rotates without selecting');
+fire('pointerdown');fire('pointercancel');fire('pointerup');flush();assert.equal(picks.length,1);
+hitLabel=null;fire('pointerdown');plotPick('edge-a');fire('pointerup');flush();assert.equal(picks.at(-1),'vertex:99','Direct marker clicks retain priority over edges');
+hitVertex=undefined;fire('pointerdown');plotPick('edge-a');fire('pointerup');flush();assert.equal(picks.at(-1),'edge-a','Edge clicks remain available');
+hitLabel='vertex:172';fire('pointerdown');hitLabel='vertex:88';hitVertex=99;fire('pointerup');flush();assert.equal(picks.at(-1),'vertex:99','Moving between labels does not select the old label');
+const count=picks.length;
+fire('pointerdown');fire('pointerup');vm.runInContext('++graphRevision',pointerContext);flush();assert.equal(picks.length,count,'A replaced graph invalidates pending picks');
+fire('pointerdown',{ctrlKey:true});fire('pointerup');flush();assert.equal(picks.length,count,'Modified gestures do not select');
+console.log('PASS: exact graph-label selection, nearby-marker conflicts, single dispatch, drag/cancel protection, direct markers, edges and stale graph picks.');
+
+// Overlapping labels resolve from the actual SVG event target, never from the
+// reverse order of annotation bounding boxes. Names, not label text, carry IDs.
+el('vertexLabels').checked=true;
+const annotation={getAttribute:()=> '0'};
+el('graph3d').contains=g=>g===annotation;
+el('graph3d').layout={scene:{annotations:[{name:'vertex:172'},{name:'vertex:99'}]}};
+assert.equal(c.graphLabelAtPointer(100,100,{closest:()=>annotation}),'vertex:172');
+assert.equal(c.graphLabelAtPointer(100,100,{closest:()=>null}),null,'Canvas clicks do not guess a label');
+assert.equal(c.graphLabelAtPointer(100,100,{closest:()=>({getAttribute:()=> '1'})}),null,'Other panels cannot supply a graph label');
+el('vertexLabels').checked=false;
+assert.equal(c.graphLabelAtPointer(100,100,{closest:()=>annotation}),null);
+assert(viewer.includes("name:'vertex:'+n.id,opacity:fade.node(n.id),showarrow:false,captureevents:true"),'Graph annotations capture their own pointer targets');
+console.log('PASS: overlapping annotations use their own SVG target and reject unrelated or hidden labels.');
+
+// Plotly can retarget pointer release to the scene canvas. Its native annotation
+// click arrives after pointerup but before the deferred graph selection.
+hitLabel=null;hitVertex=99;
+fire('pointerdown');plotPick('edge-a');fire('pointerup');
+events.get('plotly_clickannotation')({subplotId:'scene',annotation:{name:'vertex:172'}});
+const priorPicks=picks.length;flush();
+assert.equal(picks.length,priorPicks+1);assert.equal(picks.at(-1),'vertex:172','Native annotation identity overrides a retargeted canvas release');
+fire('pointerdown');fire('pointermove',{clientX:110});fire('pointerup',{clientX:110});
+events.get('plotly_clickannotation')({subplotId:'scene',annotation:{name:'vertex:88'}});flush();assert.equal(picks.length,priorPicks+1,'A dragged annotation cannot select');
+console.log('PASS: native annotation click overrides retargeted pointer release without duplicate selection.');
+
+assert(!viewer.includes('#graph3d .annotation-scene *{pointer-events:none'), 'Graph label CSS must allow native annotation events');

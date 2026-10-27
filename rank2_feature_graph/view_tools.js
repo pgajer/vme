@@ -452,18 +452,14 @@ function sizeGraphLabels2d(){
 }
 if(typeof window!=='undefined'&&typeof ResizeObserver!=='undefined')new ResizeObserver(sizeGraphLabels2d).observe(el('graph'));
 
-// Labels are visually above WebGL but must not consume its drag/wheel events.
-// Resolve a label only on a stationary click, using Plotly's annotation index.
-function graphLabelAtPointer(x,y){
- const plot=el('graph3d');if(!plot.querySelectorAll||!el('vertexLabels').checked)return null;
- const labels=[...plot.querySelectorAll('.annotation-scene')];
- for(const group of labels.reverse()){
-  const text=group.querySelector('.annotation-text'),rect=text?.getBoundingClientRect();
-  if(!rect||!rect.width||!rect.height||x<rect.left||x>rect.right||y<rect.top||y>rect.bottom)continue;
-  const name=plot.layout?.scene?.annotations?.[Number(group.getAttribute('data-index'))]?.name;
-  if(name?.startsWith('vertex:'))return name;
- }
- return null;
+// Use the actual annotation hit by the browser, not overlapping text boxes.
+// Selection still waits for a stationary pointer release in the graph handler.
+function graphLabelAtPointer(x,y,target){
+ const plot=el('graph3d');if(!el('vertexLabels').checked)return null;
+ const group=target?.closest?.('.annotation-scene');
+ if(!group||!plot.contains(group))return null;
+ const name=plot.layout?.scene?.annotations?.[Number(group.getAttribute('data-index'))]?.name;
+ return name?.startsWith('vertex:')?name:null;
 }
 const graphLabelSizeKey='vme-graph-label-size-v1';
 function setGraphLabelSize(value,persist=true){
