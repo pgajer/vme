@@ -36,6 +36,20 @@ function createDatasetPanelStorage(storage,identity){
    }
    return {updated,failed};
   },
+  enableSampleReferenceSpheresDefault(){
+   const keys=new Set(memory.keys());let updated=0,failed=0;
+   try{for(let i=0;i<storage.length;i++)keys.add(storage.key(i))}catch{failed++}
+   for(const key of keys){
+    if(key!=='vme-panel-controls-v1'&&!/^vme-dataset-panels-v1:[^:]+:vme-panel-controls-v1$/.test(key))continue;
+    try{
+     const saved=JSON.parse(memory.has(key)?memory.get(key):storage.getItem(key));
+     if(saved?.version!==1||!saved.controls||typeof saved.controls!=='object'||Array.isArray(saved.controls)||saved.sampleReferenceSpheresDefaultVersion===1)continue;
+     saved.controls.sampleReferenceSpheres=true;saved.sampleReferenceSpheresDefaultVersion=1;
+     const value=JSON.stringify(saved);memory.set(key,value);storage.setItem(key,value);updated++;
+    }catch{failed++}
+   }
+   return {updated,failed};
+  },
   resetGraphFading(){
    const keys=new Set(memory.keys());let updated=0,failed=0;
    try{for(let i=0;i<storage.length;i++)keys.add(storage.key(i))}catch{failed++}
@@ -67,7 +81,7 @@ function saveDatasetPanelSettings(){
  datasetPanelStorage.setItem(graphStrengthPreference,String(graphProportionStrength));
  datasetPanelStorage.setItem(graphMethodPreference,graphEmbeddingMethod);
  datasetPanelStorage.setItem(graphLabelSizeKey,String(graphLabelFont.size));
- const controls={version:1,graphSpheresDefaultVersion:1,controls:panelControlSnapshot(),composition:{axis:participant.axis,allTaxa:participant.allTaxa,catalogue:participant.catalogue,stateBackground:participant.stateBackground},catalogueSort:{...catalogueSort},rank3:{enabled:rank3.enabled,mode:rank3.mode,threshold:rank3.threshold,basis:rank3.basis,color:rank3.color,background:rank3.background},fitAll:trajectoryFitAll};
+ const controls={version:1,graphSpheresDefaultVersion:1,sampleReferenceSpheresDefaultVersion:1,controls:panelControlSnapshot(),composition:{axis:participant.axis,allTaxa:participant.allTaxa,catalogue:participant.catalogue,stateBackground:participant.stateBackground},catalogueSort:{...catalogueSort},rank3:{enabled:rank3.enabled,mode:rank3.mode,threshold:rank3.threshold,basis:rank3.basis,color:rank3.color,background:rank3.background},fitAll:trajectoryFitAll};
  datasetPanelStorage.setItem('vme-panel-controls-v1',JSON.stringify(controls));
  datasetPanelStorage.setItem('vme-panel-details-v1',JSON.stringify(Object.fromEntries([...document.querySelectorAll('details[id]')].filter(e=>!e.closest('#namedViewsDialog, #viewExportDialog, #familyPanel')).map(e=>[e.id,e.open]))));
  if(datasetPanelLayout)datasetPanelLayout.save();
@@ -92,7 +106,7 @@ function restoreDatasetPanelSettings(){
   }
   // Clamp legacy strengths to the current slider range; preserve saved on/off choices.
   setGraphFadeStrength(valid&&saved.controls?.graphFadeStrength!==undefined?saved.controls.graphFadeStrength:valid&&saved.controls?.graphFadeBySize===true ? .25 : .1);
-  el('sampleReferenceSpheres').checked=valid&&saved.controls?.sampleReferenceSpheres===true;
+  el('sampleReferenceSpheres').checked=!(valid&&saved.sampleReferenceSpheresDefaultVersion===1&&saved.controls?.sampleReferenceSpheres===false);
   // Migrate the former off default once, then respect subsequent user choices.
   el('graphSpheres').checked=!(valid&&saved.graphSpheresDefaultVersion===1&&saved.controls?.graphSpheres===false);
   setGraphVertexScale(valid?saved.controls?.graphVertexScale:undefined);
@@ -120,6 +134,7 @@ function restoreDatasetPanelSettings(){
 function installDatasetPanelSettings(){
  if(typeof window==='undefined')return;
  datasetPanelStorage.enableGraphSpheresDefault();
+ datasetPanelStorage.enableSampleReferenceSpheresDefault();
  datasetPanelControlDefaults=panelControlSnapshot();
  datasetPanelDetailDefaults=Object.fromEntries([...document.querySelectorAll('details[id]')].map(e=>[e.id,e.open]));
  datasetPanelReady=true;restoreDatasetPanelSettings();

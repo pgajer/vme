@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 18 · reviewed 26 October 2026.
+Specification version 19 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -124,9 +124,11 @@ their recorded appearance; older named views without this setting remain flat.
 ## Sample-view reference spheres
 
 **Sample appearance → Reference vertices → Sphere vertices** optionally draws
-reference markers as illuminated spheres. This setting starts off, is independent
-of graph sphere mode, and persists per dataset and in named views. Older saved
-views keep diamonds. **Show reference vertices** controls both markers and labels;
+reference markers as illuminated spheres. This setting starts on, is independent
+of graph sphere mode, and persists per dataset and in named views. Existing dataset
+settings receive a one-time migration to spheres, preserving other controls and
+subsequent choices to turn spheres off. Named views keep their recorded appearance;
+older named views without this setting keep diamonds. **Show reference vertices** controls both markers and labels;
 the sphere checkbox is disabled while references are hidden or unavailable.
 
 Reference spheres retain the reference colors, hover information and coordinates.
