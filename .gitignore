@@ -72,3 +72,9 @@
 !/rank2_feature_graph/audit_saved_layouts.mjs
 
 !/TESTING.md
+
+!/scripts/vme-test
+
+!/scripts/vme-test-audit
+
+!/scripts/test_validation_shortcuts.py

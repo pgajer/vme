@@ -11,6 +11,35 @@ these developer tests.
 | Dataset loading, population filtering, selection, or saved-view changes; before sharing a release | Run the integration test against a matching built app and its installed datasets. |
 | Saved-coordinate materialization or reference-anchor changes; occasional deliberate audit | Add `--audit-layouts` to run the exhaustive saved-layout audit. This is not required for every edit or every release. |
 
+## Short commands
+
+From the source clone, run these only when you want to validate:
+
+```sh
+./scripts/vme-test
+./scripts/vme-test-audit
+```
+
+The first runs integration checks; the second adds the exhaustive layout audit.
+They default to `~/vme/web/index.html`. Supply a built entry as the sole argument,
+or set `VME_TEST_PAGE` once in your shell configuration for a development build:
+
+```sh
+export VME_TEST_PAGE="/path/to/development/index.http.html"
+```
+
+An explicit argument takes precedence over `VME_TEST_PAGE`. Paths containing
+spaces are supported. Neither command builds, updates, or refits anything.
+To use the names from any directory, add the clone's `scripts` directory to
+your shell's PATH, for example in `~/.zshrc`:
+
+```sh
+export PATH="$HOME/vme-source/scripts:$PATH"
+```
+
+Open a new terminal after changing shell configuration. You can then type
+`vme-test` or `vme-test-audit`. Use `vme-test --help` for usage.
+
 ## Requirements and scope
 
 Use Node.js (verified with 23.11.0); no npm dependencies are required. Run from

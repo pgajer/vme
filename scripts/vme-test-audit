@@ -1,0 +1,5 @@
+#!/bin/sh
+# Opt-in integration checks plus the exhaustive saved-layout audit.
+set -eu
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec "$script_dir/vme-test" --audit-layouts "$@"
