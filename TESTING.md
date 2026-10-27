@@ -18,10 +18,12 @@ From the source clone, run these only when you want to validate:
 ```sh
 ./scripts/vme-test
 ./scripts/vme-test-audit
+./scripts/vme-test-layout
 ```
 
 The first runs integration checks; the second adds the exhaustive layout audit.
-They default to `~/vme/web/index.html`. Supply a built entry as the sole argument,
+The third runs only the standalone graph-layout checks.
+All three default to `~/vme/web/index.html`. Supply a built entry as the sole argument,
 or set `VME_TEST_PAGE` once in your shell configuration for a development build:
 
 ```sh
@@ -38,7 +40,7 @@ export PATH="$HOME/vme-source/scripts:$PATH"
 ```
 
 Open a new terminal after changing shell configuration. You can then type
-`vme-test` or `vme-test-audit`. Use `vme-test --help` for usage.
+`vme-test`, `vme-test-audit`, or `vme-test-layout`. Each accepts `--help`.
 
 ## Requirements and scope
 
@@ -94,12 +96,15 @@ are unchanged. It does **not** scan every saved layout.
 For focused graph-layout, camera, or named-view changes, run on demand:
 
 ```sh
+./scripts/vme-test-layout
+# Or call the test directly:
 node rank2_feature_graph/verify_graph_layout.mjs "$HOME/vme/web/index.html"
 ```
 
-In the development checkout, omitting the argument uses `index.http.html`.
-`EXPLORER_HTML` remains supported, but must name a built HTTP entry; an explicit
-argument takes precedence. The test reads the entry's local, checksum-verified
+When calling the Node test directly, omitting the argument uses `index.http.html`
+in the current directory. `EXPLORER_HTML` remains supported by that direct call,
+but must name a built HTTP entry; an explicit argument takes precedence. The
+shortcut instead follows `VME_TEST_PAGE` and the installed-app default above. The test reads the entry's local, checksum-verified
 application, loader, validator and dataset assets. No HTTP server is required.
 Offline exports and source templates are rejected with an actionable message.
 

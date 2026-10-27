@@ -1,0 +1,19 @@
+#!/bin/sh
+# Explicit graph-layout validation; never called by the portable updater.
+set -eu
+usage() {
+    echo "Usage: vme-test-layout [built-entry.html]"
+    echo "Default entry: VME_TEST_PAGE, or ~/vme/web/index.html. See TESTING.md."
+}
+case "${1:-}" in
+    --help|-h) usage; exit 0 ;;
+    -*) usage >&2; exit 2 ;;
+esac
+if [ "$#" -gt 1 ]; then usage >&2; exit 2; fi
+entry=${1:-${VME_TEST_PAGE:-$HOME/vme/web/index.html}}
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if ! command -v node >/dev/null 2>&1; then
+    echo "Node.js is required for VME validation; see TESTING.md." >&2
+    exit 127
+fi
+exec node "$script_dir/../rank2_feature_graph/verify_graph_layout.mjs" "$entry"

@@ -17,7 +17,7 @@ class ValidationShortcuts(unittest.TestCase):
             base = Path(temp)
             scripts = base / 'source with spaces' / 'scripts'
             scripts.mkdir(parents=True)
-            for name in ('vme-test', 'vme-test-audit'):
+            for name in ('vme-test', 'vme-test-audit', 'vme-test-layout'):
                 shutil.copy2(SOURCE / name, scripts / name)
             bindir = base / 'bin'
             bindir.mkdir()
@@ -32,7 +32,8 @@ class ValidationShortcuts(unittest.TestCase):
                 return subprocess.run([str(scripts / name), *args], cwd=base,
                                       env=environment, capture_output=True, text=True)
 
-            for name, flags in [('vme-test', []), ('vme-test-audit', ['--audit-layouts'])]:
+            for name, flags, target in [('vme-test', [], 'verify_http_assets.mjs'), ('vme-test-audit', ['--audit-layouts'], 'verify_http_assets.mjs'), ('vme-test-layout', [], 'verify_graph_layout.mjs')]:
+                runner = str(scripts / '../rank2_feature_graph' / target)
                 with self.subTest(command=name):
                     result = run(name)
                     self.assertEqual(result.returncode, 17, 'Propagate the test exit status')
@@ -47,6 +48,8 @@ class ValidationShortcuts(unittest.TestCase):
                     self.assertIn('Usage:', result.stdout)
                     for args in [('--unknown',), ('one.html', 'two.html')]:
                         self.assertEqual(run(name, *args).returncode, 2)
+            self.assertEqual(run('vme-test-layout', '--audit-layouts').returncode, 2)
+            runner = str(scripts / '../rank2_feature_graph/verify_http_assets.mjs')
             result = run('vme-test', '--audit-layouts', '/explicit build/index.html')
             self.assertEqual(json.loads(result.stdout), [runner, '/explicit build/index.html', '--audit-layouts'])
 

@@ -107,3 +107,5 @@
 !/rank2_feature_graph/test_association_graphs.mjs
 
 !/rank2_feature_graph/verify_graph_layout.mjs
+
+!/scripts/vme-test-layout
