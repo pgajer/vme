@@ -102,7 +102,7 @@ var selectionPanelLayoutSync=null;
       participantGraphFrames[Number(el('dimension').value)]=null;
       if(el('dimension').value==='2'&&participant.active&&!participant.graphBackground)graph();
      }
-     if(el('dimension').value==='3'&&await maybeFitSubjectGraph3d())await trimGraphEdges();
+     if(el('dimension').value==='3'){await maybeFitSubjectGraph3d();await trimGraphEdges()}else sizeGraphLabels2d();
     }
     if(typeof centerParticipantComposition==='function')centerParticipantComposition();
    }catch(error){console.error(error)}finally{resizePending=false;if(resizeAgain)resizePlots()}

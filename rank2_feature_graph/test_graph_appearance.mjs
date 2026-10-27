@@ -190,3 +190,37 @@ events.get('plotly_clickannotation')({subplotId:'scene',annotation:{name:'vertex
 console.log('PASS: native annotation click overrides retargeted pointer release without duplicate selection.');
 
 assert(!viewer.includes('#graph3d .annotation-scene *{pointer-events:none'), 'Graph label CSS must allow native annotation events');
+
+// Realistic crowding, including more labels than a narrow panel can hold.
+const packedInput=Array.from({length:65},(_,id)=>({id,x:120+(id%5)*8,y:170+Math.floor(id/5)*3,width:110+(id%4)*12,height:19,radius:3,priority:id===64?1000000:65-id}));
+const packedBefore=JSON.stringify(packedInput),bounds={x:6,y:20,width:258,height:354};
+function checkPacked(result,limits){
+ const rows=[...result.values()];
+ for(const a of rows){
+  assert(a.x>=limits.x&&a.y>=limits.y&&a.x+a.width<=limits.x+limits.width+1e-8&&a.y+a.height<=limits.y+limits.height+1e-8,'Names remain inside the panel');
+  for(const b of rows)if(a!==b)assert(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y,'Visible labels never overlap');
+ }
+}
+const packed=c.placeGraphLabels(packedInput,bounds);checkPacked(packed,bounds);
+assert(packed.has(64),'Selected vertex has first claim on available space');assert(packed.size<65&&packed.size>10);
+assert.deepEqual(plain([...c.placeGraphLabels(packedInput,bounds)]),plain([...packed]),'Stable input produces a stable layout');
+assert.equal(JSON.stringify(packedInput),packedBefore,'Layout never mutates coordinates or membership');
+const roomy={x:0,y:0,width:1200,height:800},expanded=c.placeGraphLabels(packedInput,roomy);checkPacked(expanded,roomy);assert.equal(expanded.size,65,'Larger panels recover all labels');
+const obstacle={x:130,y:170,radius:20},avoiding=c.placeGraphLabels(packedInput,bounds,[obstacle]);checkPacked(avoiding,bounds);
+for(const r of avoiding.values())assert(Math.hypot(obstacle.x-Math.max(r.x,Math.min(r.x+r.width,obstacle.x)),obstacle.y-Math.max(r.y,Math.min(r.y+r.height,obstacle.y)))>=22,'Labels avoid vertex markers');
+assert.equal(c.placeGraphLabels([],bounds).size,0);assert.equal(c.placeGraphLabels([{id:1,x:0,y:0,width:500,height:20}],bounds).size,0);
+console.log(`PASS: collision-free bounded layout (${packed.size}/65 crowded, 65/65 expanded), selected-label priority, stable coordinates and vertex clearance.`);
+// Plotly updates move only annotations; their original world coordinates and IDs stay intact.
+c.graphLabelFont={size:12,family:'Arial'};c.graphNodeLabelVisible=()=>true;c.selectedVertex=2;
+c.graphScreenPoint=p=>({x:50+p[0]*5,y:60+p[1]*5,z:0});
+el('vertexLabels').checked=true;el('graphSpheres').checked=false;
+el('graph3d').getBoundingClientRect=()=>({left:0,top:0,width:500,height:400});
+el('graph3d').layout={scene:{annotations:graph.nodes.map(n=>({name:'vertex:'+n.id,x:n.id,y:0,z:0}))}};
+const originalAnnotations=JSON.stringify(el('graph3d').layout.scene.annotations);
+const labelUpdates=c.graphSphereLabelUpdates(graph,lookup,c.graphNodeDegrees(graph));
+assert.equal(JSON.stringify(el('graph3d').layout.scene.annotations),originalAnnotations);
+assert.equal(labelUpdates['scene.annotations[1].visible'],true);
+assert(Number.isFinite(labelUpdates['scene.annotations[1].ax']));assert(Number.isFinite(labelUpdates['scene.annotations[1].ay']));
+assert.equal(labelUpdates['scene.annotations[1].arrowhead'],0);
+assert(!Object.keys(labelUpdates).some(k=>/\.(x|y|z|name)$/.test(k)));
+console.log('PASS: label placement retains graph coordinates and annotation identity for picking and export.');

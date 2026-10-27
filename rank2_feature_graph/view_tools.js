@@ -91,7 +91,7 @@ function syncGraphInformation(){
  }
  const rows=graphVertexStatistics(g,entries,population);
  el('graphVertexNote').textContent=`Whole current graph before degree filtering; vertex and edge selections do not change this table. n: unique ${population.unit} in incident edges. % of the full eligible dataset: N = ${fmt(population.N)} ${population.unit}. A sample can belong to more than one vertex union.`;
- el('graphVertexRows').innerHTML=rows.map(n=>`<tr><td>${esc(n.id)} · ${esc(n.label)}</td><td>${n.degree}</td><td>${fmt(n.count)}</td><td>${n.percent===null?'—':n.percent>0&&n.percent<.01?'&lt;0.01':n.percent.toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="4">No vertices in the current graph.</td></tr>';
+ el('graphVertexRows').innerHTML=rows.map(n=>`<tr><td><button type="button" class="graphVertexName" data-graph-vertex="${esc(n.id)}">${esc(n.id)} · ${esc(n.label)}</button></td><td>${n.degree}</td><td>${fmt(n.count)}</td><td>${n.percent===null?'—':n.percent>0&&n.percent<.01?'&lt;0.01':n.percent.toFixed(2)}</td></tr>`).join('')||'<tr><td colspan="4">No vertices in the current graph.</td></tr>';
  const singleGroups=DATA.assignment?new Set(entries.filter(e=>DATA.rank1Groups?.[e.pair]).map(e=>e.pair)).size:0;
  graphInformationCache={data:DATA,graph:g,population,singleGroups};
  renderGraphSummary(g,singleGroups);
@@ -233,6 +233,7 @@ function graphSphereGradients(svg){
 }
 function graphVertexFill(active){return graphSpheresEnabled()?'url(#'+(active?'graphSphereSelected':'graphSphereBase')+')':graphVertexColor(active)}
 function graphSphereLabelUpdates(g,lookup,degrees){
+ const packed=graphCollisionLabelUpdates(g,lookup,degrees);if(packed)return packed;
  if(!graphSpheresEnabled())return {};
  const annotations=el('graph3d').layout?.scene?.annotations||[],updates={};
  for(const n of g.nodes){const i=annotations.findIndex(a=>a.name==='vertex:'+n.id);if(i>=0)updates[`scene.annotations[${i}].yshift`]=graphVertexExtent(n.id,degrees,lookup)+4}
@@ -349,13 +350,17 @@ function matchingGraphEdgeTraces(traces){
  return traces.length>0&&data.filter(t=>t.meta?.graphEdgeGroup!==undefined).length===traces.length&&traces.every((t,i)=>t.meta?.graphEdgeGroup!==undefined&&t.meta.graphEdgeGroup===data[i]?.meta?.graphEdgeGroup);
 }
 let graphTrimming=false;
+async function positionGraphLabelsOnly(g,lookup,degrees){
+ const updates=graphCollisionLabelUpdates(g,lookup,degrees);if(!updates)return;graphTrimming=true;
+ try{await Plotly.relayout(el('graph3d'),updates)}finally{graphTrimming=false}
+}
 async function trimGraphEdges(){
  if(typeof window!=='undefined'&&document.body.classList.contains('panelMaximized')&&!el('featurePanel').classList.contains('maximized'))return;
  if(!el('graph3d')._fullLayout?.scene?._scene||el('dimension').value!=='3')return;
  const camera=liveViewCamera(el('graph3d'));
  const {g,lookup}=graphGeometry(),degrees=graphNodeDegrees(g),updates=[];
  if(participant.active){
-  const traces=participantGraphEdgeTraces(g,lookup,graphScreenPoint);if(!matchingGraphEdgeTraces(traces))return;graphTrimming=true;
+  const traces=participantGraphEdgeTraces(g,lookup,graphScreenPoint);if(!matchingGraphEdgeTraces(traces)){await positionGraphLabelsOnly(g,lookup,degrees);return}graphTrimming=true;
   try{
    // Restyling density edges can reapply the stale layout camera. Commit the
    // gesture's live camera first, as in the ordinary graph branch below.
@@ -364,7 +369,7 @@ async function trimGraphEdges(){
   }finally{graphTrimming=false}
   return;
  }
- updates.push(...graphEdgeTraces(g,lookup,graphScreenPoint));if(!matchingGraphEdgeTraces(updates))return;
+ updates.push(...graphEdgeTraces(g,lookup,graphScreenPoint));if(!matchingGraphEdgeTraces(updates)){await positionGraphLabelsOnly(g,lookup,degrees);return}
  graphTrimming=true;try{
   await Plotly.relayout(el('graph3d'),{'scene.camera':camera,...graphSphereLabelUpdates(g,lookup,degrees)});
   await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text','line'].map(k=>[k,updates.map(u=>u[k])])),updates.map((_,i)=>i));
@@ -440,6 +445,89 @@ async function trimGraphEdges(){
  el('viewExportClose').onclick=()=>dialog.close();dialog.addEventListener('close',()=>{++version;snapshot=null;if(imageURL)URL.revokeObjectURL(imageURL);imageURL=null;preview.removeAttribute('src');download.removeAttribute('href')});
 })();
 
+// Pack screen-space text rectangles without changing scientific coordinates.
+// Prefer short leaders; when space is exhausted retain selected/high-degree names.
+function placeGraphLabels(items,bounds,obstacles=[]){
+ const gap=4,placed=[],result=new Map(),clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+ const intersects=(a,b)=>a.x<b.x+b.width+gap&&a.x+a.width+gap>b.x&&a.y<b.y+b.height+gap&&a.y+a.height+gap>b.y;
+ const hitsVertex=r=>obstacles.some(p=>Math.hypot(p.x-clamp(p.x,r.x,r.x+r.width),p.y-clamp(p.y,r.y,r.y+r.height))<p.radius+2);
+ for(const item of [...items].sort((a,b)=>(b.priority||0)-(a.priority||0)||a.id-b.id)){
+  const {width,height}=item;if(width>bounds.width||height>bounds.height)continue;
+  const left=bounds.x,right=left+bounds.width-width,top=bounds.y,bottom=top+bounds.height-height;
+  const idealX=item.x-width/2,idealY=item.y-(item.radius||0)-height-5;
+  const xs=new Set([clamp(idealX,left,right),left,right]);
+  for(const r of placed){xs.add(clamp(r.x-width-gap,left,right));xs.add(clamp(r.x+r.width+gap,left,right))}
+  const ys=new Set([clamp(idealY,top,bottom),clamp(item.y+(item.radius||0)+5,top,bottom),bottom]);
+  for(let y=top;y<=bottom;y+=height+gap)ys.add(y);
+  for(const r of placed){ys.add(clamp(r.y-height-gap,top,bottom));ys.add(clamp(r.y+r.height+gap,top,bottom))}
+  let best=null,score=Infinity;
+  for(const x of xs)for(const y of ys){const r={id:item.id,x,y,width,height};
+   const distance=(x+width/2-item.x)**2+(y+height/2-item.y)**2;
+   if(distance>=score||placed.some(p=>intersects(r,p))||hitsVertex(r))continue;
+   best=r;score=distance;
+  }
+  if(best){placed.push(best);result.set(item.id,best)}
+ }
+ return result;
+}
+function graphLabelPriority(id,degree){return (id===selectedVertex||rank3.enabled&&id===rank3.vertex?1000000:0)+(degree||0)}
+function graphLabelCount(shown,total){
+ const note=el('graphLabelNote');if(!note)return;
+ note.hidden=!el('vertexLabels').checked||!total;
+ note.textContent=shown===total?`All ${total} vertex labels shown.`:`${shown} of ${total} labels shown. Select any vertex by name in the table below.`;
+ note.title='Labels avoid each other and vertex markers. Lines connect displaced names to their vertices. Selected and high-degree vertices take priority when space is limited; all vertices and edges remain in the graph.';
+}
+function graphLabelTextSize(text){
+ if(typeof document!=='undefined'&&document.createElement){
+  const context=graphLabelTextSize.context||(graphLabelTextSize.context=document.createElement('canvas').getContext('2d'));
+  if(context){context.font=graphLabelFont.size+'px '+graphLabelFont.family;return {width:Math.ceil(context.measureText(text).width)+6,height:graphLabelFont.size+7}}
+ }
+ return {width:text.length*graphLabelFont.size*.6+6,height:graphLabelFont.size+7};
+}
+function graphCollisionLabelUpdates(g,lookup,degrees){
+ const plot=el('graph3d'),rect=plot.getBoundingClientRect?.();if(!rect||rect.width<1||rect.height<1)return null;
+ const annotations=plot.layout?.scene?.annotations||[],points=new Map(),items=[],obstacles=[];
+ for(const n of g.nodes){
+  const p=graphScreenPoint(lookup.get(n.id));if(!p||p.z< -1||p.z>1)continue;
+  const radius=graphVertexExtent(n.id,degrees,lookup);points.set(n.id,{...p,radius});obstacles.push({...p,radius});
+  if(el('vertexLabels').checked&&graphNodeLabelVisible(n))items.push({id:n.id,...p,radius,...graphLabelTextSize(graphNodeLabel(n)),priority:graphLabelPriority(n.id,degrees.get(n.id))});
+ }
+ const positions=placeGraphLabels(items,{x:rect.left+6,y:rect.top+20,width:Math.max(0,rect.width-12),height:Math.max(0,rect.height-26)},obstacles),updates={};
+ annotations.forEach((a,i)=>{
+  if(!a.name?.startsWith('vertex:'))return;const id=Number(a.name.slice(7)),r=positions.get(id),p=points.get(id),prefix=`scene.annotations[${i}].`;
+  updates[prefix+'visible']=!!r;if(!r)return;
+  const values={xshift:0,yshift:0,xanchor:'center',yanchor:'middle',showarrow:true,arrowhead:0,arrowwidth:.7,arrowcolor:'#8b9da5',standoff:p.radius+2,ax:r.x+r.width/2-p.x,ay:r.y+r.height/2-p.y,bgcolor:'rgba(255,255,255,0.9)',borderpad:2};
+  for(const [key,value] of Object.entries(values))updates[prefix+key]=value;
+ });
+ graphLabelCount(positions.size,annotations.filter(a=>a.name?.startsWith('vertex:')).length);
+ return updates;
+}
+function arrangeGraphLabels2d(svg){
+ const rect=svg.getBoundingClientRect?.();if(!rect||rect.width<1||rect.height<1)return;
+ const labels=[...svg.querySelectorAll('text[data-vertex]')],circles=new Map([...svg.querySelectorAll('circle[data-vertex]')].map(c=>[Number(c.dataset.vertex),c])),items=[],obstacles=[],degrees=graphNodeDegrees(displayedGraph());
+ for(const [id,c] of circles){const r=c.getBoundingClientRect();obstacles.push({id,x:r.left+r.width/2,y:r.top+r.height/2,radius:r.width/2})}
+ for(const label of labels){
+  label.style.display='';label.setAttribute('x',0);label.setAttribute('y',0);label.setAttribute('text-anchor','start');
+  const id=Number(label.dataset.vertex),p=obstacles.find(p=>p.id===id),r=label.getBoundingClientRect();
+  if(p)items.push({id,...p,width:r.width+4,height:r.height+4,priority:graphLabelPriority(id,degrees.get(id))});
+ }
+ const positions=placeGraphLabels(items,{x:rect.left+6,y:rect.top+6,width:Math.max(0,rect.width-12),height:Math.max(0,rect.height-12)},obstacles);
+ for(const line of svg.querySelectorAll('[data-label-leader]'))line.remove();
+ for(const label of labels){
+  const id=Number(label.dataset.vertex),r=positions.get(id);if(!r){label.style.display='none';continue}
+  const m=label.getScreenCTM(),box=label.getBoundingClientRect(),p=obstacles.find(p=>p.id===id);if(!m)continue;
+  const inverse=(x,y)=>{const dx=x-m.e,dy=y-m.f,d=m.a*m.d-m.b*m.c;return [(m.d*dx-m.c*dy)/d,(-m.b*dx+m.a*dy)/d]};
+  const xy=inverse(r.x+2-(box.left-m.e),r.y+2-(box.top-m.f));label.setAttribute('x',xy[0]);label.setAttribute('y',xy[1]);
+  const end={x:Math.max(r.x,Math.min(r.x+r.width,p.x)),y:Math.max(r.y,Math.min(r.y+r.height,p.y))},distance=Math.hypot(end.x-p.x,end.y-p.y);
+  if(distance>p.radius+4){
+   const a=inverse(p.x+(end.x-p.x)*(p.radius+2)/distance,p.y+(end.y-p.y)*(p.radius+2)/distance),b=inverse(end.x,end.y);
+   const line=node('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:'#8b9da5','stroke-width':.7/Math.hypot(m.a,m.b),opacity:label.getAttribute('opacity')||1,'pointer-events':'none','data-label-leader':id},label.parentNode);
+   label.parentNode.insertBefore(line,label);
+  }
+ }
+ graphLabelCount(positions.size,labels.length);
+}
+
 // Compensate the SVG viewBox and zoom transforms to match the 3D label size.
 function sizeGraphLabels2d(){
  const svg=el('graph');if(!svg.querySelectorAll)return;
@@ -449,6 +537,7 @@ function sizeGraphLabels2d(){
   label.style.fontSize=graphLabelFont.size/scale+'px';label.style.fontFamily=graphLabelFont.family;
   label.style.strokeWidth=2/scale+'px';
  }
+ arrangeGraphLabels2d(svg);
 }
 if(typeof window!=='undefined'&&typeof ResizeObserver!=='undefined')new ResizeObserver(sizeGraphLabels2d).observe(el('graph'));
 
