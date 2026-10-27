@@ -102,6 +102,62 @@ function resetAllDatasetGraphFading(){
  el('resetGraphFadingStatus').textContent=`Fading on at 0.10 for all datasets; ${result.updated} saved settings updated.`+(result.failed?` ${result.failed} settings could not be updated.`:'');
 }
 function graphNodeSize(degree,dimension=3){return (dimension===2?5:4)*Math.sqrt(degree>0?degree:.25)*graphVertexScale()/100}
+// Spheres use coordinate-unit radii, with the same sqrt(degree) size rule.
+// One common scale from the full layout keeps subgraph selection from inflating them.
+function graphSphereUnit(lookup){
+ const points=[...lookup.values()];
+ if(!points.length)return 1/500;
+ const span=Math.max(...[0,1,2].map(j=>Math.max(...points.map(p=>p[j]||0))-Math.min(...points.map(p=>p[j]||0))));
+ return (span||1)/500;
+}
+function graphVertexExtent(id,degrees,lookup,project=graphScreenPoint){
+ const size=graphNodeSize(degrees.get(id));if(!graphSpheresEnabled())return size;
+ const p=lookup.get(id),center=project(p);if(!center)return size;
+ const radius=size*graphSphereUnit(lookup),offsets=[0,1,2].map(j=>project(p.map((v,k)=>v+(j===k?radius:0))));
+ if(offsets.some(q=>!q))return size;
+ // Orthographic projected radius; a local perspective approximation for picking/gaps.
+ return Math.sqrt(offsets.reduce((sum,q)=>sum+(q.x-center.x)**2+(q.y-center.y)**2,0)/2);
+}
+const graphSphereMesh=(()=>{
+ const points=[[0,0,1]],i=[],j=[],k=[],rings=12,sectors=24;
+ for(let r=1;r<rings;r++)for(let s=0;s<sectors;s++){const a=Math.PI*r/rings,b=2*Math.PI*s/sectors;points.push([Math.sin(a)*Math.cos(b),Math.sin(a)*Math.sin(b),Math.cos(a)])}
+ const bottom=points.length;points.push([0,0,-1]);
+ const face=(a,b,c)=>{i.push(a);j.push(b);k.push(c)};
+ for(let s=0;s<sectors;s++){
+  const next=(s+1)%sectors;face(0,1+s,1+next);
+  for(let r=0;r<rings-2;r++){const a=1+r*sectors+s,b=1+r*sectors+next;face(a,a+sectors,b);face(b,a+sectors,b+sectors)}
+  face(bottom,1+(rings-2)*sectors+next,1+(rings-2)*sectors+s);
+ }
+ return {points,i,j,k};
+})();
+function graphSphereTraces(g,lookup,degrees,fade){
+ const unit=graphSphereUnit(lookup),mesh=graphSphereMesh;
+ return g.nodes.map(n=>{
+  const center=lookup.get(n.id),radius=graphNodeSize(degrees.get(n.id))*unit,points=mesh.points.map(p=>p.map((v,j)=>center[j]+radius*v));
+  return {type:'mesh3d',meta:{graphSphere:n.id},x:points.map(p=>p[0]),y:points.map(p=>p[1]),z:points.map(p=>p[2]),i:mesh.i,j:mesh.j,k:mesh.k,
+   color:graphVertexColor(n.id===selectedVertex||rank3.enabled&&n.id===rank3.vertex),opacity:fade.node(n.id),flatshading:false,
+   lighting:{ambient:.35,diffuse:.8,specular:.55,roughness:.25,fresnel:.15},lightposition:{x:100000,y:200000,z:300000},
+   customdata:points.map(()=>'vertex:'+n.id),text:points.map(()=>esc(graphNodeHover(n,degrees.get(n.id))).replaceAll('\n','<br>')),hovertemplate:'%{text}<extra></extra>',showlegend:false};
+ });
+}
+function graphSphereGradients(svg){
+ if(!graphSpheresEnabled())return;
+ const defs=node('defs',{},svg);
+ for(const active of [false,true]){
+  const color=graphVertexColor(active),gradient=node('radialGradient',{id:active?'graphSphereSelected':'graphSphereBase',cx:'.32',cy:'.28',r:'.72'},defs);
+  for(const [offset,mix] of [[0,.85],[.25,.25],[.6,0],[1,-.65]]){
+   const rgb=color.slice(1).match(/../g).map(v=>parseInt(v,16)),shade=rgb.map(v=>Math.round(mix>=0?v+(255-v)*mix:v*(1+mix)));
+   node('stop',{offset,'stop-color':'rgb('+shade.join(',')+')'},gradient);
+  }
+ }
+}
+function graphVertexFill(active){return graphSpheresEnabled()?'url(#'+(active?'graphSphereSelected':'graphSphereBase')+')':graphVertexColor(active)}
+function graphSphereLabelUpdates(g,lookup,degrees){
+ if(!graphSpheresEnabled())return {};
+ const annotations=el('graph3d').layout?.scene?.annotations||[],updates={};
+ for(const n of g.nodes){const i=annotations.findIndex(a=>a.name==='vertex:'+n.id);if(i>=0)updates[`scene.annotations[${i}].yshift`]=graphVertexExtent(n.id,degrees,lookup)+4}
+ return updates;
+}
 function graphNodeHover(n,degree){return graphNodeLabel(n)+'\nDegree: '+degree+' (displayed top-2 connections)'}
 function graphFadeStrengthValue(value,fallback=.1){
  const n=typeof value==='number'||typeof value==='string'&&value.trim()!==''?Number(value):NaN;
@@ -145,6 +201,7 @@ function graphEdgeWidthGroups(g,classify){
  }
  return [...groups.values()].sort((a,b)=>Number(a.active)-Number(b.active)||a.width-b.width);
 }
+function graphSpheresEnabled(){return el('graphSpheres')?.checked===true}
 function graphVertexScaleValue(value){const n=Number(value);return Number.isFinite(n)&&n>=25&&n<=300?Math.round(n/5)*5:100}
 function graphVertexScale(){return graphVertexScaleValue(el('graphVertexScale')?.value)}
 function syncGraphVertexSizeControl(){if(el('graphVertexScaleValue'))el('graphVertexScaleValue').textContent=graphVertexScale()+'%'}
@@ -180,7 +237,7 @@ function graphEdgeTraces(g,lookup,project=null){
  return graphEdgeWidthGroups(g,activeEdge).map(({active,width,edges})=>{
   const pts=[],ids=[],text=[],colors=[],base=graphEdgeColor(active);
   for(const e of edges){
-   const a=lookup.get(e.from),b=lookup.get(e.to),ends=project?clippedSegment(a,b,project,graphNodeSize(degrees.get(e.from))+5,graphNodeSize(degrees.get(e.to))+5):[a,b];if(!ends)continue;
+   const a=lookup.get(e.from),b=lookup.get(e.to),ends=project?clippedSegment(a,b,project,graphVertexExtent(e.from,degrees,lookup,project)+5,graphVertexExtent(e.to,degrees,lookup,project)+5):[a,b];if(!ends)continue;
    const steps=g.edges.length>100?2:9,color=graphColorOpacity(base,fade.edge(e));
    for(let i=0;i<steps;i++){pts.push(ends[0].map((v,j)=>v+(ends[1][j]-v)*i/(steps-1)));ids.push(e.id);colors.push(color);text.push(`${esc(e.key)}: ${esc(e.label)}<br>n=${e.frequency}; Endpoint distance=${fmt(e.length)} pp${graphLayoutHover(e)}`)}
    pts.push([null,null,null]);ids.push(null);text.push('');colors.push(color);
@@ -190,7 +247,7 @@ function graphEdgeTraces(g,lookup,project=null){
 }
 function graphVertexAtPointer(x,y){
  const {g,lookup}=graphGeometry(),degrees=graphNodeDegrees(g);
- return g.nodes.map(n=>({id:n.id,size:graphNodeSize(degrees.get(n.id)),p:graphScreenPoint(lookup.get(n.id))})).filter(n=>n.p&&n.p.z>=-1&&n.p.z<=1&&Math.hypot(n.p.x-x,n.p.y-y)<=Math.max(11,n.size+4)).sort((a,b)=>a.p.z-b.p.z)[0]?.id;
+ return g.nodes.map(n=>({id:n.id,size:graphVertexExtent(n.id,degrees,lookup),p:graphScreenPoint(lookup.get(n.id))})).filter(n=>n.p&&n.p.z>=-1&&n.p.z<=1&&Math.hypot(n.p.x-x,n.p.y-y)<=Math.max(11,n.size+4)).sort((a,b)=>a.p.z-b.p.z)[0]?.id;
 }
 function clippedSegment(a,b,project,gap=12,endGap=gap){
  const pa=project(a),pb=project(b);if(!pa||!pb)return [a,b];
@@ -215,14 +272,14 @@ async function trimGraphEdges(){
   try{
    // Restyling density edges can reapply the stale layout camera. Commit the
    // gesture's live camera first, as in the ordinary graph branch below.
-   await Plotly.relayout(el('graph3d'),{'scene.camera':camera});
+   await Plotly.relayout(el('graph3d'),{'scene.camera':camera,...graphSphereLabelUpdates(g,lookup,degrees)});
    await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text','line'].map(k=>[k,traces.map(t=>t[k])])),traces.map((_,i)=>i));
   }finally{graphTrimming=false}
   return;
  }
  updates.push(...graphEdgeTraces(g,lookup,graphScreenPoint));if(!matchingGraphEdgeTraces(updates))return;
  graphTrimming=true;try{
-  await Plotly.relayout(el('graph3d'),{'scene.camera':camera});
+  await Plotly.relayout(el('graph3d'),{'scene.camera':camera,...graphSphereLabelUpdates(g,lookup,degrees)});
   await Plotly.restyle(el('graph3d'),Object.fromEntries(['x','y','z','customdata','text','line'].map(k=>[k,updates.map(u=>u[k])])),updates.map((_,i)=>i));
  }finally{graphTrimming=false}
 }
@@ -243,7 +300,7 @@ async function trimGraphEdges(){
  }
  function svgSnapshot(svg){
   const copy=svg.cloneNode(true),originals=[svg,...svg.querySelectorAll('*')],copies=[copy,...copy.querySelectorAll('*')];
-  originals.forEach((n,i)=>{const s=getComputedStyle(n);for(const key of ['fill','stroke','stroke-width','paint-order','font-size','font-family','font-weight'])copies[i].style.setProperty(key,s.getPropertyValue(key))});
+  originals.forEach((n,i)=>{const s=getComputedStyle(n);for(const key of ['fill','stroke','stroke-width','paint-order','font-size','font-family','font-weight'])copies[i].style.setProperty(key,s.getPropertyValue(key).replace(/url\(["']?[^)]*#(graphSphere(?:Base|Selected))["']?\)/g,'url(#$1)'))});
   const r=svg.getBoundingClientRect();copy.setAttribute('width',Math.round(r.width));copy.setAttribute('height',Math.round(r.height));copy.setAttribute('xmlns','http://www.w3.org/2000/svg');return new XMLSerializer().serializeToString(copy);
  }
  async function imageFrom(url){const img=new Image();img.src=url;await img.decode();return img}

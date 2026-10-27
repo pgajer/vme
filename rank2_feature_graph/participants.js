@@ -906,7 +906,7 @@ function participantGraphEdgeTraces(g,lookup,project=null){
  return graphEdgeWidthGroups(g,e=>m.byEdge.has(e.id)).map(({active:subject,width,edges})=>{
   const pts=[],ids=[],text=[],colors=[];
   for(const e of edges){
-   const a=lookup.get(e.from),b=lookup.get(e.to),ends=project?participantGraphEnds(a,b,project,graphNodeSize(degrees.get(e.from))+5,graphNodeSize(degrees.get(e.to))+5):[a,b];if(!ends)continue;
+   const a=lookup.get(e.from),b=lookup.get(e.to),ends=project?participantGraphEnds(a,b,project,graphVertexExtent(e.from,degrees,lookup,project)+5,graphVertexExtent(e.to,degrees,lookup,project)+5):[a,b];if(!ends)continue;
    const delta=b.map((v,j)=>v-a[j]),norm=delta.reduce((s,v)=>s+v*v,0),u=p=>norm?p.reduce((s,v,j)=>s+(v-a[j])*delta[j],0)/norm:0;
    const start=u(ends[0]),end=u(ends[1]),steps=subject?65:2;
    for(let i=0;i<steps;i++){

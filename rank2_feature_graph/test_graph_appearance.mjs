@@ -26,6 +26,30 @@ const largeGap=c.graphEdgeTraces(graph,lookup,p=>({x:p[0]*10,y:p[1]*10})).find(t
 assert(largeGap>smallGap,'Larger vertices increase edge clearance');
 c.setGraphVertexScale();assert.equal(c.graphVertexScale(),100,'Older settings preserve the original sizes');
 
+// Sphere meshes retain center, degree area ratios, colors, fading and vertex identity.
+c.selectedVertex=2;c.rank3={enabled:false};c.graphNodeLabel=n=>'Vertex '+n.id;
+el('graphSpheres').checked=true;el('graphFadeBySize').checked=true;
+const spheres=c.graphSphereTraces(graph,lookup,c.graphNodeDegrees(graph),c.graphFadeStyle(graph));
+assert.equal(spheres.length,graph.nodes.length);
+for(const t of spheres){
+ const center=lookup.get(t.meta.graphSphere),degree=c.graphNodeDegrees(graph).get(t.meta.graphSphere),radius=c.graphNodeSize(degree)*c.graphSphereUnit(lookup);
+ assert.equal(t.type,'mesh3d');assert.equal(t.opacity,c.graphFadeStyle(graph).node(t.meta.graphSphere));
+ assert.equal(t.color,t.meta.graphSphere===2?'#cf6b21':'#d62728');assert(t.customdata.every(id=>id==='vertex:'+t.meta.graphSphere));
+ for(let n=0;n<t.x.length;n++)assert(Math.abs(Math.hypot(t.x[n]-center[0],t.y[n]-center[1],t.z[n]-center[2])-radius)<1e-10);
+ for(let n=0;n<t.i.length;n++){
+  const ids=[t.i[n],t.j[n],t.k[n]];assert(ids.every(i=>i>=0&&i<t.x.length));
+  const [a,b,d]=ids.map(i=>[t.x[i]-center[0],t.y[i]-center[1],t.z[i]-center[2]]),u=b.map((v,i)=>v-a[i]),v=d.map((v,i)=>v-a[i]);
+  const normal=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+  assert(normal.reduce((sum,x,i)=>sum+x*a[i],0)>0,'Every triangle has an outward non-degenerate normal');
+ }
+}
+const degrees=c.graphNodeDegrees(graph),project=p=>({x:p[0]*10,y:p[1]*10}),extent=c.graphVertexExtent(1,degrees,lookup,project);
+assert(Math.abs(extent-c.graphNodeSize(1)*c.graphSphereUnit(lookup)*10)<1e-9);
+assert.equal(c.graphVertexExtent(1,degrees,lookup,p=>({x:p[0]*20,y:p[1]*20})),2*extent,'Sphere picking/gaps grow with zoom');
+assert(Math.abs((c.graphVertexExtent(2,degrees,lookup,project)/extent)**2-2)<1e-9);
+assert.equal(c.graphSphereTraces({nodes:[],edges:[]},new Map(),new Map(),c.graphFadeStyle(graph)).length,0);
+el('graphSpheres').checked=false;el('graphFadeBySize').checked=false;
+assert.equal(c.graphVertexExtent(1,degrees,lookup,project),c.graphNodeSize(1),'Flat marker behavior is unchanged');
 assert.deepEqual(graph.edges.map(e=>c.graphEdgeWidth(e)),[6,3.5,1.5]);
 assert.equal(c.graphEdgeWidth(graph.edges[2],true),3.5);
 const subset={nodes:graph.nodes.slice(2),edges:[graph.edges[2]]};
