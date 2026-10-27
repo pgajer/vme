@@ -315,6 +315,50 @@ const beforePureRestore=requests.length;await run('restoreNamedView(pureBookmark
 assert.equal(run('selected'),ctx.pureEdge);
 assert(requests.length>beforePureRestore,'Pure named view restores its 100% catalogue fit');
 assert.deepEqual(hashes(),before,'Core/non-core comparison preserves scientific bundles');
+// Optional new coordinate banks: representative UI routes, not a layout audit.
+await run('switchDataset("zapps-pressmat-v4")');await flush();
+optionalChecks.zappsMaxNormalized=!!run('datasetMaxNormalizedAsset()');
+if(optionalChecks.zappsMaxNormalized){
+ for(const [cohort,mode,q,kind] of [['all','merged','60','vertex'],['ZAPPS','pure','80','group'],['PreSSMat','merged','100','vertex']]){
+  Object.assign(ctx,{testCohort:cohort,testMode:mode,testQ:q,testKind:kind});
+  await run('changeAnalysis(testCohort,testMode,testQ)');await flush();
+  await run('testKind==="vertex"?selectVertex(current().nodes.slice().sort((a,b)=>current().edges.filter(e=>e.from===b.id||e.to===b.id).reduce((n,e)=>n+e.frequency,0)-current().edges.filter(e=>e.from===a.id||e.to===a.id).reduce((n,e)=>n+e.frequency,0))[0].id):select(current().edges.slice().sort((a,b)=>b.frequency-a.frequency)[0].id)');await flush();
+  const sampleIds=clone(run('el("samples").data.find(t=>t.meta?.sampleView).ids'));
+  const assignment=run('JSON.stringify(DATA.samples.pair)');
+  for(const method of ['maxnorm-euclidean','maxnorm-linf']){
+   ctx.testMethod=method;await run('changeEmbeddingChoice(testMethod)');await flush();
+   assert.equal(run('el("sampleEmbedding").value'),method+'-local');
+   assert.deepEqual(clone(run('el("samples").data.find(t=>t.meta?.sampleView).ids')),sampleIds);
+   assert.equal(run('JSON.stringify(DATA.samples.pair)'),assignment);
+   assert(run('el("sampleTitle").textContent.includes(maxNormalizedMethodLabel())'));
+   assert(!run('el("sampleStress").textContent.includes("unavailable")'),run('el("sampleStatus").textContent'));
+   const bookmark=clone(await run('captureNamedView()'));ctx.maxnormBookmark=bookmark;
+   await run('changeEmbeddingChoice("l1-euclidean")');await flush();
+   await run('restoreNamedView(maxnormBookmark)');await flush();
+   assert.equal(run('el("sampleEmbedding").value'),method+'-local');
+  }
+  await run('clearSelection()');await flush();assert.equal(run('el("sampleEmbedding").value'),'maxnorm-linf');
+  assert(run('el("sampleTitle").textContent.includes("MDS")'));
+ }
+ await run('changeAnalysis("PreSSMat","merged","70")');await flush();
+ ctx.maxnormParticipant=run('[...participantGroups()].find(([key,rs])=>rs.length>1&&rs[0].cohort==="PreSSMat")[0]');
+ await run('participant.embeddingMode="union";openParticipant(maxnormParticipant)');await flush();
+ for(const mode of ['pure','merged']){
+  ctx.testMode=mode;await run('changeAnalysis("PreSSMat",testMode,"70")');await run('participant.embeddingMode="union";openParticipant(maxnormParticipant)');await flush();
+  for(const method of ['maxnorm-euclidean','maxnorm-linf']){
+   ctx.testMethod=method;await run('changeEmbeddingChoice(testMethod)');await flush();
+   assert.equal(el('retrySubjectEmbedding').hidden,true,el('sampleStatus').textContent);
+   assert.equal(run('savedSubjectEmbedding(currentSubjectEmbeddingScope()).metric'),method.replace('maxnorm-',''));
+   ctx.maxnormJoint=clone(await run('captureNamedView()'));assert(ctx.maxnormJoint.subjectEmbeddingFit,'Joint fixture must use the joint embedding mode');
+   await run('changeEmbeddingChoice("l1-euclidean")');await flush();
+   assert.equal(run('captureSubjectEmbeddingFit().maxNormalizedRevision'),undefined);
+   await run('restoreNamedView(maxnormJoint)');await flush();
+   assert.deepEqual(clone(run('captureSubjectEmbeddingFit()')),ctx.maxnormJoint.subjectEmbeddingFit);
+  }
+ }
+ await run('leaveParticipant()');await flush();
+ assert.deepEqual(hashes(),before,'Max-normalized method changes preserve original scientific bundles');
+}
 await run('switchDataset(initialView.dataset)');
 const count=requests.length;await run('ensureSensitivityLoaded("rebuilt");ensureEmbeddingFamiliesLoaded()');await run('switchDataset(initialView.dataset)');assert.equal(requests.length,count,'Loaded assets are reused');
 assert.deepEqual(errors,[]);

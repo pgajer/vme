@@ -14,11 +14,17 @@ function subjectEmbeddingScope(bundle,data,cohort,mode,q,key){
 function currentSubjectEmbeddingScope(){return subjectEmbeddingScope(datasetRegistry.get(META.id),participantData(),activeCohort,activeStateMode,el('coverage').value,participant.key)}
 function validateSubjectEmbeddingFit(fit,scope){
  if(!fit||fit.context!==scope.context||JSON.stringify(fit.profiles)!==JSON.stringify(scope.profiles)||fit.coords?.length!==scope.profiles.length||fit.coords.some(p=>!Array.isArray(p)||p.length!==3||p.some(x=>!Number.isFinite(x))))throw Error('Joint embedding does not match the subject’s state population');
+ if(fit.maxNormalizedRevision){
+  const bank=BUNDLE_PACK.datasetMaxNormalizedEmbeddings?.[JSON.parse(scope.context)[0]],key=bank?.subjects[scope.context],source=bank?.fits[key+':'+fit.metric];
+  if(!source||bank.revision!==fit.maxNormalizedRevision||source.receipt!==fit.receipt||JSON.stringify(decodeSavedCoordinates(source))!==JSON.stringify(fit.coords))throw Error('Joint max-normalized fit differs from its saved supplement.');
+  return fit;
+ }
  if(fit.historical&&fit.displayRevision===BUNDLE_PACK.combDisplay?.revision&&fit.provenance&&/^[a-f0-9]{64}$/.test(fit.receipt))return fit;
  if(fit.settings?.version!=='subject-union-mds-v1'||fit.settings.backend!=='sgd'||fit.settings.dimension!==3||!fit.solver||!fit.evaluation||!Number.isFinite(fit.evaluation.relativeRms)||!/^[a-f0-9]{64}$/.test(fit.receipt??''))throw Error('Invalid joint embedding solver receipt');
  return fit;
 }
 function savedSubjectEmbedding(scope){
+ if(typeof datasetMaxNormalizedSubject==='function'&&datasetMaxNormalizedAsset()&&maxNormalizedIds.includes(el('sampleEmbedding').value))return datasetMaxNormalizedSubject(scope);
  if(subjectEmbeddingCache.has(scope.context))return validateSubjectEmbeddingFit(subjectEmbeddingCache.get(scope.context),scope);
  const packaged=typeof combSubjectFit==='function'?combSubjectFit(scope):null;if(packaged){validateSubjectEmbeddingFit(packaged,scope);subjectEmbeddingCache.set(scope.context,packaged);return packaged;}
  const assets=typeof BUNDLE_PACK==='undefined'?null:BUNDLE_PACK.subjectEmbeddings;
@@ -37,6 +43,7 @@ function savedSubjectEmbedding(scope){
  subjectEmbeddingCache.set(scope.context,fit);return fit;
 }
 async function getSubjectEmbedding(scope){
+ if(typeof datasetMaxNormalizedSubject==='function'&&datasetMaxNormalizedAsset()&&maxNormalizedIds.includes(el('sampleEmbedding').value))return datasetMaxNormalizedSubject(scope);
  if(participantData()?.capabilities?.jointEmbedding===false)throw Error('Joint embedding generation is disabled for this reviewed reference-only dataset.');
  // Capture the exact prepared asset before yielding. Never treat a deferred
  // fit as absent and fall through to numerical generation.
@@ -72,16 +79,18 @@ function subjectEmbeddingAnnotations(scope,fit){
 }
 function captureSubjectEmbeddingFit(){
  if(!participant.active||participant.embeddingMode!=='union')return null;
- const scope=currentSubjectEmbeddingScope();return copyCamera(validateSubjectEmbeddingFit(subjectEmbeddingCache.get(scope.context),scope));
+ const scope=currentSubjectEmbeddingScope();return copyCamera(validateSubjectEmbeddingFit(savedSubjectEmbedding(scope),scope));
 }
 function validateNamedSubjectEmbedding(view,bundle){
  const p=view.selection?.participant;
  if(p?.active&&p.embeddingMode==='union'){
   const d=BUNDLE_PACK.participants[view.dataset],scope=subjectEmbeddingScope(bundle,d,view.cohort,view.stateMode,view.coverage,p.key);
+  if(view.subjectEmbeddingFit?.maxNormalizedRevision&&view.selection.embedding?.replace(/-local$/,'')!=='maxnorm-'+view.subjectEmbeddingFit.metric)throw Error('Named joint fit uses a different normalization or metric.');
+  if(view.selection.embedding?.startsWith('maxnorm-')&&!view.subjectEmbeddingFit?.maxNormalizedRevision)throw Error('Named joint fit is missing its max-normalized provenance.');
   validateSubjectEmbeddingFit(view.subjectEmbeddingFit,scope);
  }else if(view.subjectEmbeddingFit!=null)throw Error('Unexpected joint embedding in this named view');
 }
-function restoreSubjectEmbeddingFit(view){if(view.subjectEmbeddingFit)subjectEmbeddingCache.set(view.subjectEmbeddingFit.context,copyCamera(view.subjectEmbeddingFit))}
+function restoreSubjectEmbeddingFit(view){if(view.subjectEmbeddingFit&&!view.subjectEmbeddingFit.maxNormalizedRevision)subjectEmbeddingCache.set(view.subjectEmbeddingFit.context,copyCamera(view.subjectEmbeddingFit))}
 
 // Decode the exact little-endian doubles without per-byte iterator callbacks.
 function decodeSavedCoordinates(source){

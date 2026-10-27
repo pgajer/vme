@@ -135,3 +135,11 @@ These tests use DOM and Plotly substitutes. They verify data flow and saved
 geometry, not actual WebGL rendering, tooltip placement, or visual appearance.
 UI changes still need a focused browser inspection. No browser pass or rebuild
 is needed solely for edits to this test or its documentation.
+
+For changes to dataset-specific max-normalized embeddings, run
+`node rank2_feature_graph/test_dataset_maxnorm.mjs` and
+`python3 -m unittest discover -s scripts -p 'test_dataset_maxnorm_supplement.py'`.
+These focused checks cover routing, duplicate records, participant cache separation,
+revision/membership validation and incomplete-bank rejection. They require no
+scientific dataset. The full integration check exercises installed supplements
+when present; it never generates coordinates.

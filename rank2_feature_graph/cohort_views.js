@@ -15,6 +15,7 @@ function cohortControlHelp(){
 // These released sample fits target full, sum-normalized relative abundances.
 // Imported datasets need their own provenance; never infer their geometry from a name.
 function standardSampleEmbeddingTitle(method){
+ if(typeof datasetMaxNormalizedAsset==='function'&&datasetMaxNormalizedAsset()&&maxNormalizedIds.includes(el('sampleEmbedding').value))return maxNormalizedMethodLabel()+' · '+method;
  const known=['comb-V3V4-tx','comb-V4-tx','umb-hmp-2019-panel','lsvf-v3v4-20241111','hmp-u01-2019','papclear-v3v4-provisional-20261017','zapps-pressmat-v4'].includes(META.id);
  return (known?'Sum-normalized Euclidean':'Normalization/metric unspecified')+' · '+method;
 }
@@ -38,7 +39,7 @@ function sampleEmbeddingTitle(overview=false){
  }else{
   const fit=overview?DATA.overviewEmbeddings?.[el('coverage').value]:null;
   const restricted=!overview||fit?.fittingScope==='population-restriction'||isMax&&(activeCohort!=='all'||activeStateMode==='pure');
-  scope=restricted?'Population 3D MDS (restricted)':'Population 3D MDS';
+  scope=isMax&&datasetMaxNormalizedAsset()&&overview?(activeCohort==='all'?'Population 3D MDS':'Cohort 3D MDS'):restricted?'Population 3D MDS (restricted)':'Population 3D MDS';
  }
  if(isMax)return (mode.startsWith('maxnorm-euclidean')?'Max-normalized Euclidean':'Max-normalized L∞')+' · '+scope;
  return standardSampleEmbeddingTitle(scope);

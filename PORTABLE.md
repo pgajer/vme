@@ -227,3 +227,23 @@ and label the fallback as a restricted population embedding.
 [On-demand validation](TESTING.md) describes focused checks, the integration
 test, and the separate opt-in saved-layout audit. These tests are not part of
 the update command and are not required for recipients to update VME.
+
+## ZAPPS + PreSSMat embedding supplement
+
+The optional `datasetMaxNormalizedEmbeddings` metadata field adds max-normalized
+Euclidean and L∞ methods for ZAPPS + PreSSMat. The software repository contains
+the viewer and validators; the coordinates remain in separately shared data.
+The matching supplement is checked against the dataset and analysis revisions,
+exact ordinary/participant memberships, coordinate receipts and complete method
+coverage before installation. Existing L1-normalized views remain available.
+
+Choose a method under **Sample view → Sample embedding**. Saved local fits are
+used for selected states and vertex unions, in each cohort, in Pure/Merged mode
+and at all five reference coverage targets. Participant mode uses a separate
+joint-state fit for the chosen method; Full reference uses that method's saved
+population coordinates. Switching methods does not change records or assignments.
+An installation without the matching supplement keeps these methods disabled.
+
+The standard metadata installation/update command also accepts metadata containing
+this bank; it does not compute embeddings or run integration/layout tests. The
+coordinate bank loads only when its dataset is opened, in bounded JSON fragments.

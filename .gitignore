@@ -78,3 +78,8 @@
 !/scripts/vme-test-audit
 
 !/scripts/test_validation_shortcuts.py
+
+# Optional dataset-specific max-normalized coordinates are distributed separately.
+!/rank2_feature_graph/test_dataset_maxnorm.mjs
+!/scripts/dataset_maxnorm_supplement.py
+!/scripts/test_dataset_maxnorm_supplement.py

@@ -158,7 +158,7 @@ function syncParticipantControls(){
  el('participantEmbeddingMode').value=participant.embeddingMode;el('participantEmbeddingMode').disabled=!active;
  for(const id of ['sampleEmbedding','panelSampleEmbedding']){
   el(id).options[3].textContent=active&&participant.embeddingMode==='union'?'Subject states · joint 3D':'Reference embedding / restricted';
-  if(active)el(id).value='reference';
+  if(active&&!maxNormalizedIds.includes(el('sampleEmbedding').value))el(id).value='reference';
  }
  if(active)for(const id of ['sampleEmbedding','panelSampleEmbedding','scope'])el(id).disabled=true;
  const timing=participantTiming(participantRows());if(!timing.available)participant.axis='visit';
@@ -597,9 +597,10 @@ function highlightParticipantBackground(pair,checked){
 function participantSampleColor(r){const color=participantColorMode()==='visit'?participantVisitColor(r):edgeColor(participantColorPair(r));return typeof samplePaletteColor==='function'?samplePaletteColor(r.index,color,r,r.profile):color}
 async function participantSamples(){
  const rows=participantRows();if(!rows.length){participantRestore(null);return samples()}
- const d=participantData(),b=datasetRegistry.get(META.id),union=participant.embeddingMode==='union',scope=union?currentSubjectEmbeddingScope():null;
+ const d=participantData(),b=datasetRegistry.get(META.id),union=participant.embeddingMode==='union',scope=union?currentSubjectEmbeddingScope():null,embeddingMethod=el('sampleEmbedding').value;
  const camera=copyCamera(pendingSampleCamera||readCamera('samples'));let fit=null,z=b.data.samples.coords;
  el('retrySubjectEmbedding').hidden=true;
+ if(!union&&datasetMaxNormalizedAsset()&&maxNormalizedIds.includes(embeddingMethod)){const population=datasetMaxNormalizedPopulationView();z=[];population.profiles.forEach((p,i)=>z[p]=population.coordinates[i])}
  if(union){
   try{
    if(!savedSubjectEmbedding(scope)){
@@ -608,10 +609,10 @@ async function participantSamples(){
     await Plotly.react('samples',[],{annotations:[{text:'Preparing joint embedding…',xref:'paper',yref:'paper',x:.5,y:.5,showarrow:false}]},{displayModeBar:false});
    }
    fit=await getSubjectEmbedding(scope);
-   if(!participant.active||participant.embeddingMode!=='union'||currentSubjectEmbeddingScope().context!==scope.context)return;
+   if(!participant.active||participant.embeddingMode!=='union'||currentSubjectEmbeddingScope().context!==scope.context||el('sampleEmbedding').value!==embeddingMethod)return;
    z=[];fit.profiles.forEach((p,i)=>z[p]=fit.coords[i]);
   }catch(error){
-   if(!participant.active||participant.embeddingMode!=='union'||currentSubjectEmbeddingScope().context!==scope.context)return;
+   if(!participant.active||participant.embeddingMode!=='union'||currentSubjectEmbeddingScope().context!==scope.context||el('sampleEmbedding').value!==embeddingMethod)return;
    el('sampleTitle').textContent=samplePanelTitle('Joint embedding unavailable',rows[0].subject,rows[0].cohort);
    el('sampleStatus').textContent=error.message+' Retry, or select Full reference under Sample appearance.';
    el('retrySubjectEmbedding').hidden=false;
@@ -640,7 +641,7 @@ async function participantSamples(){
  updateSampleContext(rows.map(r=>r.index));
  el('sampleTitle').textContent=samplePanelTitle(standardSampleEmbeddingTitle(union?'Subject-state joint 3D MDS':'Population 3D MDS (restricted)'),rows[0].subject,rows[0].cohort);
  el('sampleContext').textContent='';
- el('sampleStatus').textContent=union&&fit.historical?`${scope.records.length} cohort records in ${scope.states.length} occupied states; ${fit.profiles.length} distinct compositions. Exact population matches an existing saved embedding; its original solver provenance is retained. No refitting or assignment changes.`:union?`${scope.records.length} cohort records in ${scope.states.length} occupied ${activeStateMode==='merged'?'merged groups':'pure states'}; ${fit.distinctCompositions} distinct compositions. Full-composition Euclidean metric MDS · ${fit.solver.backend||'exact'} · ${fit.solver.epochs} epochs. Relative RMS distance error: ${(fit.evaluation.relativeRms*100).toFixed(1)}% (${fit.evaluation.pairs} evaluated pairs). Taxon labels mark observed maxima within these states. Assignments are unchanged; colors and endpoint-placement rules do not determine membership. ${fit.solver.termination}`:'Participant mode uses the saved '+META.title+' reference embedding. Background shows the selected cohort, including records without participant links. Ordinal labels do not measure elapsed time. No coordinates or assignments are recalculated.';
+ el('sampleStatus').textContent=union&&fit.maxNormalizedRevision?`${scope.records.length} cohort records in ${scope.states.length} occupied states; ${fit.distinctCompositions} distinct compositions. ${maxNormalizedMethodLabel()} · ${fit.solver.backend} · ${fit.solver.epochs} epochs. ${fit.solver.backend==='analytic'?'Exact singleton or two-point layout.':'Two tested starts; completing the epoch budget is not a convergence certificate.'} Reference vertices mark observed maxima in these states.`:union&&fit.historical?`${scope.records.length} cohort records in ${scope.states.length} occupied states; ${fit.profiles.length} distinct compositions. Exact population matches an existing saved embedding; its original solver provenance is retained. No refitting or assignment changes.`:union?`${scope.records.length} cohort records in ${scope.states.length} occupied ${activeStateMode==='merged'?'merged groups':'pure states'}; ${fit.distinctCompositions} distinct compositions. Full-composition Euclidean metric MDS · ${fit.solver.backend||'exact'} · ${fit.solver.epochs} epochs. Relative RMS distance error: ${(fit.evaluation.relativeRms*100).toFixed(1)}% (${fit.evaluation.pairs} evaluated pairs). Taxon labels mark observed maxima within these states. Assignments are unchanged; colors and endpoint-placement rules do not determine membership. ${fit.solver.termination}`:'Participant mode uses the saved '+META.title+' reference embedding. Background shows the selected cohort, including records without participant links. Ordinal labels do not measure elapsed time. No coordinates or assignments are recalculated.';
  el('sampleLegend').hidden=false;el('sampleLegendItems').innerHTML=participantColorMode()==='visit'?(d.capabilities?.arbitraryVisits?[...new Map(rows.map(r=>[r.label,participantVisitColor(r)])).entries()]:Object.entries(participantColors)).map(([label,color])=>`<span class="legendItem"><span class="colorSwatch" style="background:${color}"></span>${esc(label)}</span>`).join(''):'';
  if(participantColorMode()!=='visit'){
   const original=participantColorMode()==='original',reference=new Map(displayGraph(b.data.graphs['100'],b.data).edges.map(e=>[e.id,e]));
@@ -659,7 +660,7 @@ async function participantSamples(){
  renderStateColors(stateColors);
  el('endpointChoices').hidden=true;renderParticipantSequence(rows);renderParticipantComposition(rows);syncParticipantControls();
  const axis=k=>({visible:false,range:[ranges[k][0]-span*.03,ranges[k][1]+span*.03],autorange:false});
- return renderSamplePlot(traces,{margin:{l:0,r:0,t:0,b:0},showlegend:false,uirevision:union?'participant-union-'+scope.context:'participant-reference-'+META.revision,scene:{camera,annotations:union?subjectEmbeddingAnnotations(scope,fit):participantVertexAnnotations(),aspectmode:'data',dragmode:'orbit',xaxis:axis(0),yaxis:axis(1),zaxis:axis(2)}},{responsive:true,scrollZoom:true,displaylogo:false,displayModeBar:false});
+ return renderSamplePlot(traces,{margin:{l:0,r:0,t:0,b:0},showlegend:false,uirevision:union?'participant-union-'+scope.context:'participant-reference-'+META.revision,scene:{camera,annotations:union?subjectEmbeddingAnnotations(scope,fit):datasetMaxNormalizedAsset()&&maxNormalizedIds.includes(embeddingMethod)?subjectEmbeddingAnnotations({states:[...new Set(background.map(r=>b.data.samples.pair[r.profile]))],profiles:background.map(r=>r.profile)},{coords:background.map(r=>z[r.profile])}):participantVertexAnnotations(),aspectmode:'data',dragmode:'orbit',xaxis:axis(0),yaxis:axis(1),zaxis:axis(2)}},{responsive:true,scrollZoom:true,displaylogo:false,displayModeBar:false});
 }
 function installControlHelp(){
  const explanations={

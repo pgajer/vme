@@ -175,6 +175,16 @@ def prepare(package, metadata_path, output, announce=True):
         validate(metadata['maxNormalizedEmbeddings'], population(package, original),
                  original['datasets']['comb-V3V4-tx']['dataset']['revision'])
         manifest['seed']['maxNormalizedEmbeddings'] = metadata['maxNormalizedEmbeddings']
+    dataset_banks=metadata.get('datasetMaxNormalizedEmbeddings',{})
+    if dataset_banks:
+        from dataset_maxnorm_supplement import validate as validate_dataset_maxnorm
+        for dataset,bank in dataset_banks.items():
+            if dataset not in original['datasets']:raise ValueError('Embedding supplement requires dataset '+dataset)
+            parts=[json.loads(checked_bytes(web,d)) for d in original['datasets'][dataset]['parts']]
+            bundle=next(b for part in parts for b in part.get('bundles',[]) if b['dataset']['id']==dataset)
+            participants=next(part['participants'][dataset] for part in parts if dataset in part.get('participants',{}))
+            subject_contexts={k:v for part in parts for k,v in part.get('subjectEmbeddings',{}).get('contexts',{}).items()}
+            validate_dataset_maxnorm(bank,bundle,participants,{'contexts':subject_contexts})
     pure_vertices = metadata.get('pureVertexLocal')
     if pure_vertices:
         from pure_vertex_supplement import package_part, saved_fits, validate as validate_pure_vertices
@@ -222,6 +232,16 @@ def prepare(package, metadata_path, output, announce=True):
     manifest['validator'] = publish((HERE / 'bundle_format.js').read_bytes())
     if pure_vertices:
         manifest['datasets']['comb-V3V4-tx']['parts'].append(publish(encoded({'pureVertexLocal': pure_vertices}), 'json'))
+    for dataset,bank in dataset_banks.items():
+        parts=manifest['datasets'][dataset]['parts']
+        parts.append(publish(encoded({'datasetMaxNormalizedEmbeddings':{dataset:{**bank,'fits':{}}}}),'json'))
+        rows={};size=0
+        for key,fit in bank['fits'].items():
+            length=len(encoded(fit))
+            if rows and size+length>4*1024*1024:
+                parts.append(publish(encoded({'datasetMaxNormalizedEmbeddings':{dataset:{'fits':rows}}}),'json'));rows={};size=0
+            rows[key]=fit;size+=length
+        if rows:parts.append(publish(encoded({'datasetMaxNormalizedEmbeddings':{dataset:{'fits':rows}}}),'json'))
     loader_desc = publish(loader.encode())
     bootstrap = '<script id="vme-http-manifest" type="application/json">' + encoded(manifest).decode().replace('</', '<\\/') + '</script><script src="' + loader_desc['url'] + '"></script>'
     pieces = []; cursor = 0
