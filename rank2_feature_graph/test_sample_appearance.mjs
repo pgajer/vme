@@ -57,7 +57,7 @@ assert.equal(el('participantShowVertices').disabled,true,'Views with no referenc
 assert.equal(el('sampleReferenceNote').hidden,false);
 // Participant rendering remains governed by its existing, independent appearance settings.
 run('participant.active=true;participant.showLabels=false;participant.showLines=false;participant.showArrows=true;syncSampleAppearanceControls();renderSamplePlot(traces,layout,{})');
-assert.equal(renders.at(-1).traces,traces);assert.equal(renders.at(-1).layout,layout);
+assert.equal(renders.at(-1).traces[0],traces[0]);assert.equal(renders.at(-1).traces[2],traces[2]);assert.equal(renders.at(-1).layout,layout);
 assert.equal(el('samplePointGroupTitle').textContent,'Background samples');
 assert.equal(el('participantBackgroundOpacity').value,25);
 assert.equal(el('participantLabelSize').disabled,true);assert.equal(el('participantArrowScale').disabled,true);
@@ -84,7 +84,7 @@ assert.deepEqual(plain(sphereResult.layout),plain(context.sphereLayout));
 assert.equal(sphereResult.layout.scene.camera,context.sphereLayout.scene.camera);
 for(const [i,t] of sphereResult.traces.slice(1).entries()){
  assert.equal(t.type,'mesh3d');assert.equal(t.meta.referenceVertices,true);assert.equal(t.meta.referenceSphere,true);
- assert.equal(t.color,context.sphereInput[1].marker.color[i]);assert(t.customdata.every(id=>id===context.sphereInput[1].customdata[i]));assert(t.text.every(text=>text===context.sphereInput[1].hovertext[i]));
+ assert.equal(t.color,'#d62728');assert(t.customdata.every(id=>id===context.sphereInput[1].customdata[i]));assert(t.text.every(text=>text===context.sphereInput[1].hovertext[i]));
  assert.equal(t.hovertemplate,'%{text}<extra></extra>');assert.equal(t.meta.sampleView,undefined);
 }
 assert.equal(JSON.stringify(context.sphereInput),sphereOriginal);
@@ -96,6 +96,23 @@ context.referenceLayout={scene:{annotations:[{name:'participant-reference-vertex
 run('renderSamplePlot([visitTrace],referenceLayout,{})');
 assert.equal(renders.at(-1).traces.length,2,'Coincident labeled references share a sphere');assert.equal(renders.at(-1).traces[0],context.visitTrace,'Participant visits keep their existing trace');
 assert.equal(renders.at(-1).traces[1].meta.legendRecords,undefined);assert.match(renders.at(-1).traces[1].text[0],/reference one<br>reference two/);
-el('sampleReferenceSpheres').checked=false;run('renderSamplePlot([visitTrace],referenceLayout,{})');assert.equal(renders.at(-1).traces.length,1);
+el('sampleReferenceSpheres').checked=false;run('renderSamplePlot([visitTrace],referenceLayout,{})');assert.equal(renders.at(-1).traces.length,2);assert.equal(renders.at(-1).traces[1].marker.symbol,'diamond');
 run('participant.active=false;syncSampleAppearanceControls(false)');assert.equal(el('sampleReferenceSpheres').disabled,true);
-console.log('PASS: reference-only sphere meshes, original colors/hover/identity, hidden references, participant label-only references, coincident deduplication, unchanged visits/cameras/input traces.');
+console.log('PASS: reference-only sphere meshes, uniform reference color, preserved hover/identity, hidden references, participant label-only references, coincident deduplication, unchanged visits/cameras/input traces.');
+
+// Both marker modes use the same scale/color, without changing sample geometry.
+run('participant.showVertices=true;restoreSampleReferenceSettings({scale:200,color:"#12AB34"})');
+assert.equal(el('sampleReferenceScaleValue').textContent,'200%');
+el('sampleReferenceScale').oninput();el('sampleReferenceColor').oninput();
+assert.deepEqual(context.lastCamera,{eye:{x:1,y:2,z:3}});
+run('renderSamplePlot(sphereInput,sphereLayout,{})');
+const diamonds=renders.at(-1);assert.equal(diamonds.traces[1].marker.size,16);assert.equal(diamonds.traces[1].marker.color,'#12ab34');
+assert.deepEqual(diamonds.traces[1].x,context.sphereInput[1].x);assert.deepEqual(diamonds.traces[0].x,context.sphereInput[0].x);
+el('sampleReferenceSpheres').checked=true;run('renderSamplePlot(sphereInput,sphereLayout,{})');
+const scaledSphere=renders.at(-1).traces[1],radius=16*10/600;
+assert.equal(scaledSphere.color,'#12ab34');assert(Math.abs(Math.max(...scaledSphere.x)-2-radius)<1e-10);
+assert.deepEqual(renders.at(-1).traces[0].marker,diamonds.traces[0].marker);assert.equal(JSON.stringify(context.sphereInput),sphereOriginal);
+run('participant.showVertices=false;syncSampleAppearanceControls()');
+assert.equal(el('sampleReferenceScale').disabled,true);assert.equal(el('sampleReferenceColor').disabled,true);
+run('restoreSampleReferenceSettings({scale:NaN,color:"invalid"})');assert.deepEqual(plain(run('sampleReferenceSettings()')),{scale:100,color:'#d62728'});
+console.log('PASS: reference size/color apply to spheres and diamonds, preserve samples/camera/hover, disable when hidden, and reject invalid settings.');

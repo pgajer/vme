@@ -142,23 +142,27 @@ function graphSphereTraces(g,lookup,degrees,fade){
 }
 // Only reference markers become meshes; observation and selection traces stay intact.
 function sampleReferenceSphereTraces(traces,layout){
- if(el('sampleReferenceSpheres')?.checked!==true||!participant.showVertices)return traces;
+ if(!participant.showVertices)return traces;
+ const spheres=el('sampleReferenceSpheres')?.checked===true,appearance=sampleReferenceSettings();
  const references=traces.filter(t=>t.meta?.referenceVertices),extra=[];
  if(!references.length){
-  // Participant views historically show reference labels without separate diamonds.
+  // Give annotation-only participant references the same marker controls.
   const groups=new Map();
   for(const a of layout.scene?.annotations||[]){
    if(!String(a.name||'').startsWith('participant-reference-vertex:')||![a.x,a.y,a.z].every(Number.isFinite))continue;
    const key=JSON.stringify([a.x,a.y,a.z]);if(!groups.has(key))groups.set(key,{a,labels:[]});groups.get(key).labels.push(a.text);
   }
-  for(const {a,labels} of groups.values())extra.push({meta:{referenceVertices:true},x:[a.x],y:[a.y],z:[a.z],text:[labels.join('<br>')],marker:{size:8,color:'#24414c'},showlegend:false});
+  for(const {a,labels} of groups.values())extra.push({type:'scatter3d',mode:'markers',meta:{referenceVertices:true},x:[a.x],y:[a.y],z:[a.z],text:[labels.join('<br>')],marker:{size:8,symbol:'diamond',color:'#24414c'},hovertemplate:'%{text}<extra></extra>',showlegend:false});
  }
  const all=[...traces,...extra],lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];
  for(const t of all)for(const [j,axis] of ['x','y','z'].entries())for(const v of t[axis]||[])if(Number.isFinite(v)){lo[j]=Math.min(lo[j],v);hi[j]=Math.max(hi[j],v)}
  const span=Math.max(...hi.map((v,j)=>v-lo[j])),unit=(Number.isFinite(span)&&span>0?span:1)/600,mesh=graphSphereMesh;
  const at=(v,i,fallback)=>Array.isArray(v)?v[i]??fallback:v??fallback;
  return all.flatMap(t=>{
-  if(!t.meta?.referenceVertices||t.visible===false||t.visible==='legendonly'||!t.x?.length)return [t];
+  if(!t.meta?.referenceVertices||t.visible===false||t.visible==='legendonly')return [t];
+  const scaled=v=>(Number.isFinite(v)?v:8)*appearance.scale/100;
+  t={...t,marker:{...t.marker,color:appearance.color,size:Array.isArray(t.marker?.size)?t.marker.size.map(scaled):scaled(t.marker?.size)}};
+  if(!spheres||!t.x?.length)return [t];
   const result=[];
   for(let n=0;n<t.x.length;n++){
    const center=[t.x[n],t.y?.[n],t.z?.[n]];if(!center.every(Number.isFinite))continue;
@@ -246,6 +250,13 @@ function restoreGraphColorSettings(settings){
  if(el('graphVertexColor'))el('graphVertexColor').value=validGraphColor(settings?.vertex)?settings.vertex.toLowerCase():'#d62728';
  if(el('graphEdgeColor'))el('graphEdgeColor').value=validGraphColor(settings?.edge)?settings.edge.toLowerCase():'#82a9b9';
 }
+function sampleReferenceSettings(){return {scale:graphVertexScaleValue(el('sampleReferenceScale')?.value),color:validGraphColor(el('sampleReferenceColor')?.value)?el('sampleReferenceColor').value.toLowerCase():'#d62728'}}
+function restoreSampleReferenceSettings(settings){
+ el('sampleReferenceScale').value=String(graphVertexScaleValue(settings?.scale));
+ el('sampleReferenceColor').value=validGraphColor(settings?.color)?settings.color.toLowerCase():'#d62728';
+ syncSampleReferenceSizeControl();
+}
+function syncSampleReferenceSizeControl(){el('sampleReferenceScaleValue').textContent=sampleReferenceSettings().scale+'%'}
 function graphVertexColor(active=false){return active?'#cf6b21':graphColorSettings().vertex}
 function graphEdgeColor(active=false){return active?'#cf6b21':graphColorSettings().edge}
 // Normalize against the full current reference, so selecting a subgraph does

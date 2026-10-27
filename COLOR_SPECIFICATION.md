@@ -1,6 +1,6 @@
 # VME color specification
 
-Specification version 19 · reviewed 26 October 2026.
+Specification version 20 · reviewed 26 October 2026.
 
 Canonical VME-wide reference for dataset authors and interface developers.
 Read this specification when preparing, adding or revising a VME dataset.
@@ -131,9 +131,15 @@ subsequent choices to turn spheres off. Named views keep their recorded appearan
 older named views without this setting keep diamonds. **Show reference vertices** controls both markers and labels;
 the sphere checkbox is disabled while references are hidden or unavailable.
 
-Reference spheres retain the reference colors, hover information and coordinates.
-Participant views with reference labels alone gain spheres at those labeled
-locations while enabled. Coincident participant references share one sphere.
+**Vertex size** scales reference marker sizes from 25–300% in 5% steps, starting
+at 100%. **Vertex color** sets one base color for every reference marker, starting
+with the graph's red (`#d62728`). These controls apply to spheres and diamonds,
+are independent of graph appearance, and persist per dataset and in named views.
+Older settings without these controls use 100% and red. Labels retain their
+existing colors. Reference hovers and coordinates are preserved.
+Participant views with reference labels alone gain markers at those labeled
+locations (spheres when enabled, otherwise diamonds). Coincident participant
+references share one marker.
 Ordinary samples, participant visits, selection rings, sample counts and embeddings
 retain their existing representations. Sphere radii are the existing marker size
 times 1/600 of the plotted coordinate span, so they grow with zoom. PNG export

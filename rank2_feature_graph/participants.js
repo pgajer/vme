@@ -540,7 +540,8 @@ function syncSampleAppearanceControls(referenceAvailable=true){
  }
  el('participantShowVertices').disabled=!referenceAvailable;
  el('participantVertexLabelSize').disabled=!referenceAvailable||!participant.showVertices;
- el('sampleReferenceSpheres').disabled=!referenceAvailable||!participant.showVertices;
+ for(const id of ['sampleReferenceSpheres','sampleReferenceScale','sampleReferenceColor'])el(id).disabled=!referenceAvailable||!participant.showVertices;
+ syncSampleReferenceSizeControl();
  el('sampleReferenceNote').hidden=referenceAvailable;
  el('participantLabelSize').disabled=!active||!participant.showLabels;
  el('participantArrowScale').disabled=!active||!participant.showLines||!participant.showArrows;
@@ -745,6 +746,8 @@ function restoreSampleAppearanceLayout(layout){
 }
 function installParticipants(){
  el('sampleReferenceSpheres').onchange=()=>refreshSamples(pendingSampleCamera||readCamera('samples'));
+ el('sampleReferenceScale').oninput=()=>{syncSampleReferenceSizeControl();refreshSamples(pendingSampleCamera||readCamera('samples'))};
+ el('sampleReferenceColor').oninput=()=>refreshSamples(pendingSampleCamera||readCamera('samples'));
  el('participantSortTarget').onchange=()=>setParticipantSortTarget(el('participantSortTarget').value);
  el('exportParticipantSwitching').onclick=()=>{
   if(el('exportParticipantSwitching').disabled)return;
