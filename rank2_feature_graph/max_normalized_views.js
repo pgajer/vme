@@ -68,10 +68,11 @@ function syncMaxNormalizedControls(){
  if(!available&&maxNormalizedIds.includes(preferredSampleEmbedding))preferredSampleEmbedding='local';
 }
 function maxNormalizedDescription(){
- const view=maxNormalizedView();return view?view.label+(maxNormalizedIsLocal()?(view.solver.backend==='analytic'?' · exact local layout of '+view.profiles.length+' distinct composition(s)':' · independent local 3D MDS of this selection; max-normalized targets, two tested starts, 200 SGD epochs'):(datasetMaxNormalizedAsset()?' · saved 3D embedding of the current population':' · fixed full-population 3D embedding; selections restrict coordinates without refitting')):null;
+ const view=maxNormalizedView();return view?view.label+(maxNormalizedIsLocal()?(view.solver.backend==='analytic'?' · exact local layout of '+view.profiles.length+' distinct composition(s)':' · independent local 3D MDS of this selection; '+(view.unfolded?'unfolded Euclidean':'max-normalized')+' targets, two tested starts, 200 SGD epochs'):(datasetMaxNormalizedAsset()?' · saved 3D embedding of the current population':' · fixed full-population 3D embedding; selections restrict coordinates without refitting')):null;
 }
 function maxNormalizedStress(ordered,rows){
  const view=maxNormalizedView();if(!view)return false;
+ if(view.unfolded)return unfoldedStress(view,ordered,rows);
  const asset=maxNormalizedAsset(),metric=view.metric;
  const positions=new Map((view.profiles||asset.profiles).map((p,i)=>[p,view.coordinates[i]]));
  if(ordered.some(p=>!positions.get(p.profile)?.every((v,k)=>v===p.xyz[k])))throw Error('Displayed coordinates differ from the max-normalized fit; no score is substituted.');
@@ -82,7 +83,13 @@ function maxNormalizedStress(ordered,rows){
 }
 
 function validateMaxNormalizedNamedView(view){
- const s=view.selection;if(!maxNormalizedIds.includes(s?.embedding))return;
+ const s=view.selection;
+ if(s?.unfoldFaces){
+  const unfolded=BUNDLE_PACK.datasetUnfoldedEmbeddings?.[view.dataset];
+  const context=JSON.stringify([view.cohort,view.stateMode,String(view.coverage),'vertex',String(s.selectedVertex)]);
+  if(s.embedding!=='maxnorm-euclidean-local'||s.selectedVertex===null||!unfolded||unfolded.revision!==view.unfoldedRevision||!unfolded.contexts[context])throw Error('The saved unfolded view requires its matching vertex supplement.');
+ }
+ if(!maxNormalizedIds.includes(s?.embedding))return;
  const bank=BUNDLE_PACK.datasetMaxNormalizedEmbeddings?.[view.dataset];
  if(bank){
   if(view.datasetRevision!==bank.baseRevision||view.maxNormalizedRevision!==bank.revision||view.pureCoverage||s.rank3?.enabled&&(s.rank3.selected.length>0||s.rank3.vertex!==null||s.selected===null&&s.selectedVertex===null))throw Error('Saved max-normalized dataset revision differs.');
@@ -104,6 +111,7 @@ function maxNormalizedLocalLevel(coverage=el('coverage').value,asset=maxNormaliz
  return local?.version===2?local.levels[coverage]:local?.coverage===coverage?local:null;
 }
 function maxNormalizedLocalEntry(method=maxNormalizedMethod()){
+ if(typeof unfoldedEntry==='function'&&el('unfoldFaces')?.checked){const rotated=unfoldedEntry(method);if(rotated)return rotated}
  const bank=datasetMaxNormalizedAsset();
  if(bank){const kind=selectedVertex!==null?'vertex':selected!==null?'group':null;return kind?datasetMaxNormalizedFit(bank.contexts[datasetMaxNormalizedContext(kind,selectedVertex??selected)],method,bank):null}
  const asset=maxNormalizedAsset(),local=maxNormalizedLocalLevel();
@@ -113,7 +121,7 @@ function maxNormalizedLocalEntry(method=maxNormalizedMethod()){
 }
 function maxNormalizedLocalView(){
  const fit=maxNormalizedLocalEntry();if(!fit)throw Error('No max-normalized local fit for this selection');
- return {...fit,label:maxNormalizedMethodLabel()};
+ return {...fit,label:fit.unfolded?fit.label:maxNormalizedMethodLabel()};
 }
 const maxNormalizedLocalCache=new WeakMap();
 function maxNormalizedLocalFit(){
@@ -126,7 +134,7 @@ function maxNormalizedLocalFit(){
  const observed=new Set(indices.map(i=>(DATA.records?.[i]?.profile??i)));
  if(observed.size!==members.size||[...observed].some(p=>!members.has(p)))throw Error('Local embedding membership differs from this selection');
  const fit={indices,n:indices.length,coords:indices.map(i=>positions.get((DATA.records?.[i]?.profile??i))),
-  source:'Independent max-normalized '+(entry.metric==='linf'?'L∞':'Euclidean')+' local fit',
+  source:(entry.unfolded?'Anchor-unfolded ':'Independent ')+'max-normalized '+(entry.metric==='linf'?'L∞':'Euclidean')+' local fit',
   'relative.error':entry.evaluation.relativeRms,'global.relative.error':entry.validation?.globalRestrictionRms??null};
  cache.set(entry,fit);return fit;
 }
@@ -182,6 +190,7 @@ function syncEmbeddingChoices(){
    'Local selection requires a matching saved fit. Max-normalized local fits: Rebuilt reference, All cohorts, Merged groups, and a supplied coverage level.';
   if(scope.parentElement)scope.parentElement.title=scope.title;
  }
+ if(typeof syncUnfoldedControls==='function')syncUnfoldedControls();
 }
 function changeEmbeddingChoice(method){
  const state=embeddingChoiceState();if(state.locked)return;
@@ -194,6 +203,7 @@ function changeEmbeddingChoice(method){
  return el('sampleEmbedding').onchange();
 }
 function installEmbeddingChoices(){
+ if(typeof installUnfoldedControls==='function')installUnfoldedControls();
  for(const [methodId,scopeId] of [['sampleMethod','sampleFitScope'],['panelSampleMethod','panelSampleFitScope']]){
   el(methodId).onchange=()=>changeEmbeddingChoice(el(methodId).value,el(scopeId).value);
   el(scopeId).onchange=()=>changeEmbeddingChoice(el(methodId).value,el(scopeId).value);

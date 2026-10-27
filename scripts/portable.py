@@ -185,6 +185,15 @@ def prepare(package, metadata_path, output, announce=True):
             participants=next(part['participants'][dataset] for part in parts if dataset in part.get('participants',{}))
             subject_contexts={k:v for part in parts for k,v in part.get('subjectEmbeddings',{}).get('contexts',{}).items()}
             validate_dataset_maxnorm(bank,bundle,participants,{'contexts':subject_contexts})
+    unfolded_banks=metadata.get('datasetUnfoldedEmbeddings',{})
+    if unfolded_banks:
+        from unfolded_supplement import validate as validate_unfolded
+        for dataset,bank in unfolded_banks.items():
+            if dataset not in original['datasets']:raise ValueError('Unfolded supplement requires dataset '+dataset)
+            parts=[json.loads(checked_bytes(web,d)) for d in original['datasets'][dataset]['parts']]
+            bundle=next(b for part in parts for b in part.get('bundles',[]) if b['dataset']['id']==dataset)
+            participants=next(part['participants'][dataset] for part in parts if dataset in part.get('participants',{}))
+            validate_unfolded(bank,bundle,participants)
     valencia_banks = metadata.get('valencia2', {})
     if valencia_banks:
         from valencia_supplement import validate as validate_valencia
@@ -245,16 +254,17 @@ def prepare(package, metadata_path, output, announce=True):
         manifest['datasets']['comb-V3V4-tx']['parts'].append(publish(encoded({'pureVertexLocal': pure_vertices}), 'json'))
     for dataset, asset in valencia_banks.items():
         manifest['datasets'][dataset]['parts'].append(publish(encoded({'valencia2': {dataset: asset}}), 'json'))
-    for dataset,bank in dataset_banks.items():
-        parts=manifest['datasets'][dataset]['parts']
-        parts.append(publish(encoded({'datasetMaxNormalizedEmbeddings':{dataset:{**bank,'fits':{}}}}),'json'))
-        rows={};size=0
-        for key,fit in bank['fits'].items():
-            length=len(encoded(fit))
-            if rows and size+length>4*1024*1024:
-                parts.append(publish(encoded({'datasetMaxNormalizedEmbeddings':{dataset:{'fits':rows}}}),'json'));rows={};size=0
-            rows[key]=fit;size+=length
-        if rows:parts.append(publish(encoded({'datasetMaxNormalizedEmbeddings':{dataset:{'fits':rows}}}),'json'))
+    for field,banks in [('datasetMaxNormalizedEmbeddings',dataset_banks),('datasetUnfoldedEmbeddings',unfolded_banks)]:
+        for dataset,bank in banks.items():
+            parts=manifest['datasets'][dataset]['parts']
+            parts.append(publish(encoded({field:{dataset:{**bank,'fits':{}}}}),'json'))
+            rows={};size=0
+            for key,fit in bank['fits'].items():
+                length=len(encoded(fit))
+                if rows and size+length>4*1024*1024:
+                    parts.append(publish(encoded({field:{dataset:{'fits':rows}}}),'json'));rows={};size=0
+                rows[key]=fit;size+=length
+            if rows:parts.append(publish(encoded({field:{dataset:{'fits':rows}}}),'json'))
     loader_desc = publish(loader.encode())
     bootstrap = '<script id="vme-http-manifest" type="application/json">' + encoded(manifest).decode().replace('</', '<\\/') + '</script><script src="' + loader_desc['url'] + '"></script>'
     pieces = []; cursor = 0

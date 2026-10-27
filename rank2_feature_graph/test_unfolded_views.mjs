@@ -1,0 +1,31 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,{value:'',checked:false,options:[],parentElement:{}});return elements.get(id)};
+const ctx=vm.createContext({el,atob,console});const run=s=>vm.runInContext(s,ctx),plain=s=>JSON.parse(JSON.stringify(run(s)));
+run(`let META={id:'fixture',revision:'v1'},activeCohort='all',activeStateMode='merged',selected=null,selectedVertex=1,preferredSampleEmbedding='local';
+let participant={active:false},DATA={records:[{profile:0},{profile:1},{profile:1}],samples:{ids:['a','b','c'],pair:['1,2','1,2','1,2']}};
+const BUNDLE_PACK={participants:{fixture:{analysisRevision:'a'}},datasetMaxNormalizedEmbeddings:{fixture:{version:1,dataset:'fixture',baseRevision:'v1',analysisRevision:'a',contexts:{},fits:{}}},datasetUnfoldedEmbeddings:{fixture:{version:1,dataset:'fixture',baseRevision:'v1',analysisRevision:'a',revision:'u',contexts:{},fits:{}}}};
+const rank3UsesSamples=()=>false,candidateActive=()=>false,pureCoverageActive=()=>false,eligibleIndices=()=>[0,1,2],incidentEdges=()=>[{id:'1,2'}];
+let history=[],refreshed=0;function rememberSelection(){history.push(el('unfoldFaces').checked)}function refreshSamples(){refreshed++}
+function decodeSavedCoordinates(s){return s.coordinates}
+`);
+for(const f of ['embedding_stress.js','max_normalized_views.js','unfolded_views.js'])run(fs.readFileSync(new URL(f,import.meta.url),'utf8'));
+el('coverage').value='90';el('sampleEmbedding').value='maxnorm-euclidean-local';
+run(`const key=datasetMaxNormalizedContext('vertex',1),normal={profiles:[0,1],metric:'euclidean',coordinates:[[0,0,0],[1,0,0]],evaluation:{relativeRms:0},solver:{backend:'analytic'}};
+BUNDLE_PACK.datasetMaxNormalizedEmbeddings.fixture.contexts[key]='ordinary';BUNDLE_PACK.datasetMaxNormalizedEmbeddings.fixture.fits['ordinary:euclidean']=normal;
+BUNDLE_PACK.datasetUnfoldedEmbeddings.fixture.contexts[key]='rotated';BUNDLE_PACK.datasetUnfoldedEmbeddings.fixture.fits['rotated:euclidean']={...normal,anchor:0,coordinates:[[0,0,0],[2,0,0]]};
+installUnfoldedControls();syncUnfoldedControls();`);
+assert.equal(el('unfoldFaces').disabled,false);assert.equal(run('maxNormalizedLocalFit().coords[1][0]'),1);
+el('panelUnfoldFaces').checked=true;el('panelUnfoldFaces').onchange();
+assert.equal(run('unfoldedEnabled()'),true);assert.equal(run('maxNormalizedLocalFit().coords[1][0]'),2);assert.deepEqual(plain('maxNormalizedLocalFit().indices'),[0,1,2]);assert.deepEqual(plain('history'),[false]);
+el('unfoldFaces').checked=false;el('unfoldFaces').onchange();assert.equal(run('maxNormalizedLocalFit().coords[1][0]'),1);assert.deepEqual(plain('history'),[false,true]);
+assert.deepEqual(plain('unfoldedStressRows([[[0,1],[1,.2],[2,.3]],[[0,.3],[1,1],[2,.6]]],0)'),[[[1,.2],[2,.3]],[[1,1.7],[2,.6]]]);
+assert.deepEqual(plain('unfoldedStressRows([[[0,.5],[1,1],[2,1]]],0)'),[[[1,1.5],[2,1]]]);
+run(`el('unfoldFaces').checked=true;unfoldedStress(unfoldedEntry(),[{profile:0,xyz:[0,0,0]},{profile:1,xyz:[2,0,0]}],[[[0,1]],[[1,1]]])`);
+assert.equal(run("embeddingStressDetails.get('sampleStress').result.relativeRms"),0);
+run(`unfoldedStress(unfoldedEntry(),[{profile:1,xyz:[2,0,0]}],[[[1,1]]])`);
+assert.equal(run("embeddingStressDetails.get('sampleStress').result.relativeRms"),null,'One visible profile has no pairwise stress');
+assert.throws(()=>run(`unfoldedStress(unfoldedEntry(),[{profile:1,xyz:[9,0,0]}],[[[1,1]]])`),/coordinates differ/);
+run("el('unfoldFaces').checked=true;el('sampleEmbedding').value='maxnorm-linf-local';syncUnfoldedControls()");assert.equal(el('unfoldFaces').disabled,true);assert.equal(el('unfoldFaces').checked,false);
+run("el('sampleEmbedding').value='maxnorm-euclidean-local';selectedVertex=null;syncUnfoldedControls()");assert.equal(el('unfoldFaces').disabled,true);
+run("selectedVertex=1;META.id='other';syncUnfoldedControls()");assert.equal(el('unfoldFaces').disabled,true);
+console.log('PASS: rotation toggle restores original coordinates, preserves repeated records, synchronizes controls/history, transforms stress targets, and disables unsupported views.');

@@ -23,6 +23,7 @@ const read=d=>fs.readFileSync(path.join(base,d.url));
 class Element{constructor(id=''){this.id=id;this.value='';this.children=[];this.dataset={};this.style={};this.options=[{value:""},{value:""},{value:""},{value:""}];this.handlers={};this.textContent='';this.disabled=false;this.classList={add(){},remove(){},toggle(){},contains(){return false}}}setAttribute(k,v){this[k]=v}appendChild(c){this.children.push(c)}replaceChildren(){this.children=[]}addEventListener(k,f){this.handlers[k]=f}on(k,f){this.handlers[k]=f}}
 const elements=new Map(),el=id=>{if(!elements.has(id))elements.set(id,new Element(id));return elements.get(id)};
 for(const [id,value] of Object.entries({coverage:'60',dimension:'3',graphScope:'all',sampleEmbedding:'local',scope:'core',search:''}))el(id).value=value;
+for(const id of ['unfoldFaces','panelUnfoldFaces'])el(id).parentElement={title:''};
 el('vertexLabels').checked=true;const saved=new Map([['vme-graph-embedding-method-v1','spring']]),errors=[],requests=[];
 let gate=null,failURL=null;
 const request=async url=>{requests.push(url);if(url===failURL)throw Error("Test-only interrupted asset transfer");if(gate&&gate.urls.has(url))await gate.promise;const bytes=read({url});return {ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)}};
@@ -383,6 +384,27 @@ for(const fixture of [
  }
  await run('leaveParticipant()');await flush();
  assert.deepEqual(hashes(),before,'Max-normalized method changes preserve original scientific bundles');
+}
+// Optional anchor-unfolded views: same samples and colors; distinct geometry.
+await run("switchDataset('zapps-pressmat-v4')");await flush();
+optionalChecks.unfoldedVertices=!!run('typeof unfoldedAsset==="function"&&unfoldedAsset()');
+if(optionalChecks.unfoldedVertices){
+ for(const [cohort,mode,q,vertex] of [['all','merged','90',172],['all','merged','60',172],['ZAPPS','pure','80',172],['PreSSMat','merged','100',172]]){
+  Object.assign(ctx,{uc:cohort,um:mode,uq:q,uv:vertex});
+  await run('changeAnalysis(uc,um,uq)');await run('selectVertex(uv)');await run('changeEmbeddingChoice("maxnorm-euclidean")');await flush();
+  const signature=()=>clone(run('(()=>{const t=el("samples").data.find(t=>t.meta?.sampleView);return {ids:t.ids,colors:t.marker.color,selectedVertex,selected}})()'));
+  const original=signature(),coords=clone(run('maxNormalizedLocalFit().coords'));
+  assert.equal(el('unfoldFaces').disabled,false);
+  el('panelUnfoldFaces').checked=true;await el('panelUnfoldFaces').onchange();await flush();
+  assert.equal(run('unfoldedEnabled()'),true);assert.deepEqual(signature(),original);
+  assert.match(el('sampleTitle').textContent,/Unfolded faces/);
+  ctx.unfoldedBookmark=clone(await run('captureNamedView()'));assert.equal(ctx.unfoldedBookmark.unfoldedRevision,run('unfoldedAsset().revision'));
+  el('unfoldFaces').checked=false;await el('unfoldFaces').onchange();await flush();assert.deepEqual(clone(run('maxNormalizedLocalFit().coords')),coords);
+  await run('restoreNamedView(unfoldedBookmark)');await flush();assert.equal(run('unfoldedEnabled()'),true);assert.deepEqual(signature(),original);
+  await run('changeEmbeddingChoice("maxnorm-linf")');await flush();assert.equal(el('unfoldFaces').disabled,true);assert.equal(run('unfoldedEnabled()'),false);
+ }
+ await run('switchDataset("comb-V3V4-tx")');await flush();assert.equal(el('unfoldFaces').disabled,true);
+ assert.deepEqual(hashes(),before,'Unfolding preserves frozen assignments and original coordinates');
 }
 await run('switchDataset(initialView.dataset)');
 const count=requests.length;await run('ensureSensitivityLoaded("rebuilt");ensureEmbeddingFamiliesLoaded()');await run('switchDataset(initialView.dataset)');assert.equal(requests.length,count,'Loaded assets are reused');

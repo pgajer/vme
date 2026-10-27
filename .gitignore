@@ -91,3 +91,9 @@
 !/rank2_feature_graph/VALENCIA2_DATASETS.md
 
 !/rank2_feature_graph/test_dataset_preferences.mjs
+
+# Optional anchor-unfolded views: source and tests only.
+!/rank2_feature_graph/test_unfolded_views.mjs
+!/rank2_feature_graph/unfolded_views.js
+!/scripts/test_unfolded_supplement.py
+!/scripts/unfolded_supplement.py

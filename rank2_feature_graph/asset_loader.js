@@ -4,7 +4,7 @@
 function mergePack(target,part,append=false){
  for(const [key,value] of Object.entries(part)){
   if(key==='bundles'){target.bundles??=[];for(const b of value){if(target.bundles.some(x=>x.dataset.id===b.dataset.id))throw Error('Duplicate dataset asset');target.bundles.push(b)}}
-  else if(key==='datasetMaxNormalizedEmbeddings'){
+  else if(['datasetMaxNormalizedEmbeddings','datasetUnfoldedEmbeddings'].includes(key)){
    target[key]??={};for(const [id,bank] of Object.entries(value)){const previous=target[key][id]||{};target[key][id]={...previous,...bank,fits:Object.assign(previous.fits||{},bank.fits||{})}}
   }
   else if(['subjectEmbeddings','graphLayouts','combDisplay'].includes(key)){

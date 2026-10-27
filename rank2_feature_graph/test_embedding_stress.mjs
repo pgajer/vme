@@ -36,13 +36,14 @@ console.log('PASS: analytic RMSRE, display scaling, target metrics, reproducible
 // Titles distinguish abundance normalization from target-distance construction.
 const titleSource=fs.readFileSync('rank2_feature_graph/cohort_views.js','utf8');
 vm.runInContext(titleSource.slice(titleSource.indexOf('function standardSampleEmbeddingTitle('),titleSource.indexOf('function syncAnalysisControls(')),c);
-Object.assign(c,{maxNormalizedIds:['maxnorm-euclidean','maxnorm-linf','maxnorm-euclidean-local','maxnorm-linf-local'],localSelectionFit:()=>({}),activeStateMode:'merged',META:{id:'comb-V3V4-tx'},DATA:{records:[{}]},activeCohort:'all',activeSensitivityMode:'rebuilt',maxNormalizedIsLocal:()=>el('sampleEmbedding').value.endsWith('-local')});
+Object.assign(c,{datasetMaxNormalizedAsset:()=>null,maxNormalizedIds:['maxnorm-euclidean','maxnorm-linf','maxnorm-euclidean-local','maxnorm-linf-local'],localSelectionFit:()=>({}),activeStateMode:'merged',META:{id:'comb-V3V4-tx'},DATA:{records:[{}]},activeCohort:'all',activeSensitivityMode:'rebuilt',maxNormalizedIsLocal:()=>el('sampleEmbedding').value.endsWith('-local')});
 el('sampleEmbedding').value='overview';
 assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts · Rebuilt reference · Sum-normalized Euclidean · Population 3D MDS');
 c.rebuiltOnlyPopulation=()=>true;
 assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts · Sum-normalized Euclidean · Population 3D MDS');
 for(const mode of ['local','global','reference']){el('sampleEmbedding').value=mode;assert.match(c.sampleEmbeddingTitle(),/^Sum-normalized Euclidean · /)}
 for(const [mode,metric] of [['maxnorm-euclidean','Euclidean'],['maxnorm-linf','L∞']])for(const [suffix,scope] of [['','Population'],['-local','Local']]){el('sampleEmbedding').value=mode+suffix;assert.equal(c.sampleEmbeddingTitle(),'Max-normalized '+metric+' · '+scope+' 3D MDS'+(suffix?'':' (restricted)'))}
+el('sampleEmbedding').value='maxnorm-euclidean-local';c.unfoldedEnabled=()=>true;assert.match(c.sampleEmbeddingTitle(),/Unfolded faces · Local 3D MDS/);c.unfoldedEnabled=()=>false;
 el('sampleEmbedding').value='local';
 c.localSelectionFit=()=>({fittingScope:'population-restriction'});
 assert.equal(c.sampleEmbeddingTitle(),'Sum-normalized Euclidean · Population 3D MDS (restricted)');

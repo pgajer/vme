@@ -46,7 +46,7 @@ function sampleEmbeddingTitle(overview=false){
    if(fitted?.profiles.some(p=>!shown.has(p)))scope+=' (restricted)';
   }
  }
- if(isMax)return (mode.startsWith('maxnorm-euclidean')?'Max-normalized Euclidean':'Max-normalized L∞')+' · '+scope;
+ if(isMax)return (mode.startsWith('maxnorm-euclidean')?'Max-normalized Euclidean':'Max-normalized L∞')+(typeof unfoldedEnabled==='function'&&unfoldedEnabled()?' · Unfolded faces':'')+' · '+scope;
  return standardSampleEmbeddingTitle(scope);
 }
 function syncAnalysisControls(){
