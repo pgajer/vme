@@ -5,6 +5,7 @@ run(`let META={id:'fixture',revision:'v1'},activeCohort='all',activeStateMode='m
 let participant={active:false},DATA={records:[{profile:0},{profile:1},{profile:1}],samples:{ids:['a','b','c'],pair:['1,2','1,2','1,2']}};
 const BUNDLE_PACK={participants:{fixture:{analysisRevision:'a'}},datasetMaxNormalizedEmbeddings:{fixture:{version:1,dataset:'fixture',baseRevision:'v1',analysisRevision:'a',contexts:{},fits:{}}},datasetUnfoldedEmbeddings:{fixture:{version:1,dataset:'fixture',baseRevision:'v1',analysisRevision:'a',revision:'u',contexts:{},fits:{}}}};
 const rank3UsesSamples=()=>false,candidateActive=()=>false,pureCoverageActive=()=>false,eligibleIndices=()=>[0,1,2],incidentEdges=()=>[{id:'1,2'}];
+let localScope='local';function localSelectionFit(){return {fittingScope:localScope}}
 let history=[],refreshed=0;function rememberSelection(){history.push(el('unfoldFaces').checked)}function refreshSamples(){refreshed++}
 function decodeSavedCoordinates(s){return s.coordinates}
 `);
@@ -14,7 +15,7 @@ run(`const key=datasetMaxNormalizedContext('vertex',1),normal={profiles:[0,1],me
 BUNDLE_PACK.datasetMaxNormalizedEmbeddings.fixture.contexts[key]='ordinary';BUNDLE_PACK.datasetMaxNormalizedEmbeddings.fixture.fits['ordinary:euclidean']=normal;
 BUNDLE_PACK.datasetUnfoldedEmbeddings.fixture.contexts[key]='rotated';BUNDLE_PACK.datasetUnfoldedEmbeddings.fixture.fits['rotated:euclidean']={...normal,anchor:0,coordinates:[[0,0,0],[2,0,0]]};
 installUnfoldedControls();syncUnfoldedControls();`);
-assert.equal(el('unfoldFaces').disabled,false);assert.equal(run('maxNormalizedLocalFit().coords[1][0]'),1);
+assert.equal(el('unfoldFaces').parentElement.hidden,false);assert.equal(el('unfoldFaces').disabled,false);assert.equal(run('maxNormalizedLocalFit().coords[1][0]'),1);
 el('panelUnfoldFaces').checked=true;el('panelUnfoldFaces').onchange();
 assert.equal(run('unfoldedEnabled()'),true);assert.equal(run('maxNormalizedLocalFit().coords[1][0]'),2);assert.deepEqual(plain('maxNormalizedLocalFit().indices'),[0,1,2]);assert.deepEqual(plain('history'),[false]);
 el('unfoldFaces').checked=false;el('unfoldFaces').onchange();assert.equal(run('maxNormalizedLocalFit().coords[1][0]'),1);assert.deepEqual(plain('history'),[false,true]);
@@ -29,3 +30,11 @@ run("el('unfoldFaces').checked=true;el('sampleEmbedding').value='maxnorm-linf-lo
 run("el('sampleEmbedding').value='maxnorm-euclidean-local';selectedVertex=null;syncUnfoldedControls()");assert.equal(el('unfoldFaces').disabled,true);
 run("selectedVertex=1;META.id='other';syncUnfoldedControls()");assert.equal(el('unfoldFaces').disabled,true);
 console.log('PASS: rotation toggle restores original coordinates, preserves repeated records, synchronizes controls/history, transforms stress targets, and disables unsupported views.');
+
+run("META.id='fixture';selectedVertex=null;selected='1,2';el('sampleEmbedding').value='maxnorm-euclidean-local';syncUnfoldedControls()");
+assert.equal(el('unfoldFaces').parentElement.hidden,false);assert.equal(el('unfoldFaces').disabled,true);assert.match(el('unfoldFaces').parentElement.title,/edge view/);
+run("selected=null;el('sampleEmbedding').value='maxnorm-euclidean';syncUnfoldedControls()");assert.equal(el('unfoldFaces').parentElement.hidden,true);
+run("selectedVertex=1;el('sampleEmbedding').value='local';syncUnfoldedControls()");assert.equal(el('unfoldFaces').parentElement.hidden,false);assert.equal(el('unfoldFaces').disabled,true);
+run("localScope='population-restriction';syncUnfoldedControls()");assert.equal(el('unfoldFaces').parentElement.hidden,true);
+run("localScope='local';participant.active=true;syncUnfoldedControls()");assert.equal(el('unfoldFaces').parentElement.hidden,true);
+console.log('PASS: header unfolding appears for local vertex and edge fits, hides on overview/global restrictions/participants, and explains missing edge fits or unsupported methods.');

@@ -162,6 +162,8 @@ function pureCoverageAvailable(){return activeStateMode==='pure'&&!participant.a
 function pureCoverageKey(){return datasetKey()+'|'+el('coverage').value}
 function pureCoverageActive(){return pureCoverageAvailable()&&pureCoverageComparison?.key===pureCoverageKey()}
 function syncPureCoverageControls(){
+ // With embedding and unfolding in the header, only the pure-state filter remains here.
+ for(const id of ['sampleControls','panelSampleControls']){const section=el(id);if(section)section.hidden=activeStateMode!=='pure'||!!activeEmbeddingFamily}
  const available=pureCoverageAvailable();if(!available||pureCoverageComparison?.key!==pureCoverageKey())pureCoverageComparison=null;
  if(available&&!pureCoverageComparison&&pureNonCorePreference())pureCoverageComparison={key:pureCoverageKey(),nonCore:true,frame:{}};
  if(pureCoverageActive()){

@@ -15,10 +15,17 @@ function unfoldedEntry(method=maxNormalizedMethod()){
 }
 function unfoldedEnabled(){return el('unfoldFaces')?.checked===true&&!!unfoldedEntry()}
 function syncUnfoldedControls(){
- const available=!!unfoldedEntry(),checked=available&&el('unfoldFaces').checked;
+ const selection=selectedVertex!==null||selected!==null;
+ const local=selection&&!participant.active&&!rank3UsesSamples()&&!candidateActive()&&!pureCoverageActive()&&sampleUsesLocalFit();
+ const fit=local?localSelectionFit():null,visible=!!fit&&fit.fittingScope!=='population-restriction';
+ const available=visible&&!!unfoldedEntry(),checked=available&&el('unfoldFaces').checked;
+ const unavailable=maxNormalizedMethod()!=='maxnorm-euclidean'?'Unfolding requires Max-normalized · Euclidean and a matching saved unfolded fit.':
+  selectedVertex===null?'No unfolded fit has been supplied for this edge view.':
+  'No matching unfolded fit has been supplied for this vertex, cohort, state mode and coverage.';
  for(const id of ['unfoldFaces','panelUnfoldFaces']){
   const control=el(id);if(!control)continue;control.disabled=!available;control.checked=checked;
-  control.parentElement.title=available?'Rotate neighboring dominant faces around this vertex’s face, then use the saved local Euclidean 3D fit. Off restores the ordinary fit. Samples and colors stay the same. Cuts between other faces remain.':'Requires a selected vertex, Max-normalized · Euclidean, and its separately supplied unfolded fit.';
+  if(id==='unfoldFaces')control.parentElement.hidden=!visible;
+  control.parentElement.title=available?'Rotate neighboring dominant faces around this vertex’s face, then use the saved local Euclidean 3D fit. Off restores the ordinary fit. Samples and colors stay the same. Cuts between other faces remain.':unavailable;
  }
 }
 function installUnfoldedControls(){
