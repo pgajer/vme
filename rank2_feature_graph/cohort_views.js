@@ -26,7 +26,15 @@ function samplePanelTitle(method,selection='',cohortOverride=null){
  const population=META.id==='comb-V3V4-tx'&&typeof rebuiltOnlyPopulation==='function'&&rebuiltOnlyPopulation()?'':META.id==='comb-V3V4-tx'
   ? ({baseline:'Current dataset',fixed:'Fixed reference',rebuilt:'Rebuilt reference'}[typeof activeSensitivityMode==='undefined'?'baseline':activeSensitivityMode]||'Current dataset')
   : 'Full dataset';
- return [cohort,population,method,selection].filter(Boolean).join(' · ');
+ // Keep provenance available on hover and in standalone exports without repeating
+ // the header's method selector in the visible title.
+ el('sampleTitle').title=[cohort,population,method,selection].filter(Boolean).join(' · ');
+ const scope=/unavailable|Loading/i.test(method)?method:
+  method.includes('(restricted)')?(method.includes('Local 3D')?'Local fit subset':'Global fit subset'):
+  selection&&method.includes('Subject-state joint')?'Joint local fit':
+  selection&&method.includes('Local 3D')?'Local fit':'';
+ const unfolded=method.includes('Unfolded faces')?'Unfolded faces':'';
+ return [cohort,selection,scope,unfolded].filter(Boolean).join(' · ');
 }
 function sampleEmbeddingTitle(overview=false){
  const mode=el('sampleEmbedding').value;

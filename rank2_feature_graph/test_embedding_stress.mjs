@@ -38,9 +38,15 @@ const titleSource=fs.readFileSync('rank2_feature_graph/cohort_views.js','utf8');
 vm.runInContext(titleSource.slice(titleSource.indexOf('function standardSampleEmbeddingTitle('),titleSource.indexOf('function syncAnalysisControls(')),c);
 Object.assign(c,{datasetMaxNormalizedAsset:()=>null,maxNormalizedIds:['maxnorm-euclidean','maxnorm-linf','maxnorm-euclidean-local','maxnorm-linf-local'],localSelectionFit:()=>({}),activeStateMode:'merged',META:{id:'comb-V3V4-tx'},DATA:{records:[{}]},activeCohort:'all',activeSensitivityMode:'rebuilt',maxNormalizedIsLocal:()=>el('sampleEmbedding').value.endsWith('-local')});
 el('sampleEmbedding').value='overview';
-assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts · Rebuilt reference · Sum-normalized Euclidean · Population 3D MDS');
+assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts');
+assert.equal(el('sampleTitle').title,'All cohorts · Rebuilt reference · Sum-normalized Euclidean · Population 3D MDS');
 c.rebuiltOnlyPopulation=()=>true;
-assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts · Sum-normalized Euclidean · Population 3D MDS');
+assert.equal(c.samplePanelTitle(c.sampleEmbeddingTitle(true)),'All cohorts');
+assert.equal(c.samplePanelTitle('Max-normalized Euclidean · Cohort 3D MDS','','ZAPPS'),'ZAPPS');
+assert.equal(c.samplePanelTitle('Max-normalized Euclidean · Local 3D MDS','Vertex: L iners','ZAPPS'),'ZAPPS · Vertex: L iners · Local fit');
+assert.equal(c.samplePanelTitle('Max-normalized Euclidean · Unfolded faces · Local 3D MDS','Vertex: L iners','ZAPPS'),'ZAPPS · Vertex: L iners · Local fit · Unfolded faces');
+assert.equal(c.samplePanelTitle('Sum-normalized Euclidean · Population 3D MDS (restricted)','Selected state','ZAPPS'),'ZAPPS · Selected state · Global fit subset');
+assert.equal(c.samplePanelTitle('Joint embedding unavailable','Participant 1','ZAPPS'),'ZAPPS · Participant 1 · Joint embedding unavailable');
 for(const mode of ['local','global','reference']){el('sampleEmbedding').value=mode;assert.match(c.sampleEmbeddingTitle(),/^Sum-normalized Euclidean · /)}
 for(const [mode,metric] of [['maxnorm-euclidean','Euclidean'],['maxnorm-linf','L∞']])for(const [suffix,scope] of [['','Population'],['-local','Local']]){el('sampleEmbedding').value=mode+suffix;assert.equal(c.sampleEmbeddingTitle(),'Max-normalized '+metric+' · '+scope+' 3D MDS'+(suffix?'':' (restricted)'))}
 el('sampleEmbedding').value='maxnorm-euclidean-local';c.unfoldedEnabled=()=>true;assert.match(c.sampleEmbeddingTitle(),/Unfolded faces · Local 3D MDS/);c.unfoldedEnabled=()=>false;
@@ -56,4 +62,4 @@ assert.equal(c.familyEmbeddingTitle({metric:'hellinger',construction:'Complete F
 assert.equal(c.familyEmbeddingTitle({metric:'ratio_euclidean',construction:'PCA projection'},'Lc'),'Lc-normalized Euclidean · 3D PCA');
 assert.equal(c.familyEmbeddingTitle({metric:'sqrt_ratio_euclidean',construction:'Symmetric kNN + MST'},'Li'),'Square-root Li-normalized Euclidean · kNN + MST shortest paths · 3D MDS');
 assert.equal(c.familyEmbeddingTitle({metric:'jensen_shannon',construction:'Complete Fermat',power:1},'Li'),'Sum-normalized Jensen–Shannon · Fermat p=1 · 3D MDS');
-console.log('PASS: normalization and target metrics in sample and neighborhood titles; max-normalized views stay distinct; undocumented imports remain explicit.');
+console.log('PASS: concise sample titles retain selection, fit exceptions and hover/export provenance; neighborhood titles retain normalization and target metrics; max-normalized views stay distinct; undocumented imports remain explicit.');

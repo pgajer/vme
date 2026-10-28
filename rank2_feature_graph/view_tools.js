@@ -400,7 +400,7 @@ async function trimGraphEdges(){
   if(kind==='graph')await waitGraphEmbedding();
   await (kind==='samples'?queue:graphQueue);await frame();await frame();
   const plot=el(kind==='samples'?'samples':el('dimension').value==='3'?'graph3d':'graph'),r=plot.getBoundingClientRect();
-  const result={kind,width:Math.max(1,Math.round(r.width)),height:Math.max(1,Math.round(r.height)),title:kind==='samples'?el('sampleTitle').textContent:'Features and top-2 CSTs graph',rows:information(kind),filename:`vaginal-microbiome-${kind}-${META.id}-${new Date().toISOString().replace(/[:.]/g,'-')}`};
+  const result={kind,width:Math.max(1,Math.round(r.width)),height:Math.max(1,Math.round(r.height)),title:kind==='samples'?(el('sampleTitle').title||el('sampleTitle').textContent):'Features and top-2 CSTs graph',rows:information(kind),filename:`vaginal-microbiome-${kind}-${META.id}-${new Date().toISOString().replace(/[:.]/g,'-')}`};
   if(plot.id==='graph')result.svg=svgSnapshot(plot);
   else{
    result.data=clone(plot.data);result.layout=clone(plot.layout);result.layout.scene=exportScene(plot);
