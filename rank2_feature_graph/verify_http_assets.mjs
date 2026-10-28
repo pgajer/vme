@@ -354,7 +354,7 @@ for(const fixture of [
    assert.equal(run('el("sampleEmbedding").value'),method+'-local');
    assert.deepEqual(clone(run('el("samples").data.find(t=>t.meta?.sampleView).ids')),sampleIds);
    assert.equal(run('JSON.stringify(DATA.samples.pair)'),assignment);
-   assert(run('el("sampleTitle").textContent.includes(maxNormalizedMethodLabel())'));
+   assert(run('el("sampleTitle").title.includes(maxNormalizedMethodLabel())'));
    assert(!run('el("sampleStress").textContent.includes("unavailable")'),run('el("sampleStatus").textContent'));
    const bookmark=clone(await run('captureNamedView()'));ctx.maxnormBookmark=bookmark;
    await run('changeEmbeddingChoice("l1-euclidean")');await flush();
@@ -362,9 +362,9 @@ for(const fixture of [
    assert.equal(run('el("sampleEmbedding").value'),method+'-local');
   }
   await run('clearSelection()');await flush();assert.equal(run('el("sampleEmbedding").value'),'maxnorm-linf');
-  assert(run('el("sampleTitle").textContent.includes("MDS")'));
+  assert(run('el("sampleTitle").title.includes("MDS")'));
   if(cohort==='all'&&mode==='pure')assert.deepEqual(clone(run('maxNormalizedView().profiles')),clone(run('datasetRegistry.get(META.id).data.overviewEmbeddings[el("coverage").value].indices')).sort((a,b)=>a-b));
-  if(cohort!=='all'&&mode==='pure')assert(run('el("sampleTitle").textContent.includes("(restricted)")'),'Pure subset title identifies the population restriction');
+  if(cohort!=='all'&&mode==='pure')assert(run('el("sampleTitle").title.includes("(restricted)")'),'Pure subset title tooltip identifies the population restriction');
  }
  await run('changeAnalysis(maxnormCohort,"merged","70")');await flush();
  ctx.maxnormParticipant=run('[...participantGroups()].find(([key,rs])=>rs.length>1&&rs[0].cohort===maxnormCohort)[0]');
@@ -387,6 +387,20 @@ for(const fixture of [
 }
 // Optional anchor-unfolded views: same samples and colors; distinct geometry.
 await run("switchDataset('zapps-pressmat-v4')");await flush();
+// Both checkboxes drive the existing assignment modes, including the rank-1
+// exception at 100%. Restore the saved mode/coverage after this control check.
+const assignmentState=clone(run('({cohort:activeCohort,mode:activeStateMode,q:el("coverage").value})'));ctx.assignmentState=assignmentState;
+await run('changeAnalysis("all","merged","100")');await flush();
+for(const id of ['stateMode','panelStateMode'])assert.equal(el(id).checked,true);
+assert.equal(run('DATA.overviewEmbeddings["100"].indices.length'),4941);
+el('stateMode').checked=false;await el('stateMode').onchange();await flush();
+assert.equal(run('activeStateMode'),'pure');assert.equal(el('panelStateMode').checked,false);
+assert.equal(run('DATA.overviewEmbeddings["100"].indices.length'),4936);
+el('panelStateMode').checked=true;await el('panelStateMode').onchange();await flush();
+assert.equal(run('activeStateMode'),'merged');assert.equal(el('stateMode').checked,true);
+assert.equal(run('DATA.overviewEmbeddings["100"].indices.length'),4941);
+await run('changeAnalysis(assignmentState.cohort,assignmentState.mode,assignmentState.q)');await flush();
+
 optionalChecks.unfoldedVertices=!!run('typeof unfoldedAsset==="function"&&unfoldedAsset()');
 if(optionalChecks.unfoldedVertices){
  for(const [cohort,mode,q,vertex] of [['all','merged','90',172],['all','merged','60',172],['ZAPPS','pure','80',172],['PreSSMat','merged','100',172]]){

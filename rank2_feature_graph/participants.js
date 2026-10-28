@@ -667,7 +667,7 @@ function installControlHelp(){
   datasetSelect:()=> 'Select the dataset to explore. Dataset-specific cohorts, states and participants update together. Choose Load dataset bundle… at the end of this list to load a prepared JSON file; it is validated before use. '+el('datasetMethods').textContent,
   populationComparison:populationControlHelp,
   cohortSelect:cohortControlHelp,
-  stateMode:()=>el('analysisMessage').textContent,
+  stateMode:()=>analysisExtension()?'Checked: assign samples outside the retained pure 2-CSTs to those groups, keeping all samples. Unchecked: show only samples whose original top-two pair belongs to a retained state. At 100% coverage, samples with only one detected taxon still have no pure 2-CST.':'Merged assignments are not available for this dataset; only original pure states can be shown.',
   coverage:()=>el('analysisMessage').textContent+' The percentage selects the reference core or retained pure states; it does not refit sample coordinates.',
   sampleEmbedding:'Global and reference views keep fixed coordinates; Local 3D MDS uses the saved embedding for the selected sample set. Only supported views are available for each dataset.',
   resetPanels:'Restore the default panel proportions and sample/graph information sidebar widths.',

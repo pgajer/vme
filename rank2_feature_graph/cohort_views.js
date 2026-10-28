@@ -64,7 +64,7 @@ function syncAnalysisControls(){
  for(const id of ['cohortSelect','panelCohortSelect']){
   el(id).innerHTML=choices.map(c=>`<option value="${esc(c)}">${esc(a?(c==='all'&&activeStateMode==='pure'&&a.combDisplay&&!a.eligibility?'Frozen distinct-profile view':cohortChoiceLabel(a.populations[c].title)):records?(c==='all'?'Frozen distinct-profile view':cohortChoiceLabel(records.populations[c].title)):'Full combined reference')}</option>`).join('');el(id).value=activeCohort;el(id).disabled=!a&&!records;el(id).title=cohortControlHelp();
  }
- for(const id of ['stateMode','panelStateMode']){el(id).value=activeStateMode;el(id).disabled=!a}
+ for(const id of ['stateMode','panelStateMode']){el(id).value=activeStateMode;el(id).checked=activeStateMode==='merged';el(id).disabled=!a}
  const coverageHelp='Choose the largest pure 2-CSTs that together cover at least this percentage of the reference dataset. '+(activeStateMode==='merged'?'Remaining samples are assigned to these groups; all samples stay in the view.':'Show samples belonging to these states.');
  for(const id of ['coverageLabel','panelCoverageLabel']){el(id).textContent='Largest 2-CSTs coverage';el(id).title=coverageHelp}
  for(const id of ['coverage','panelCoverage'])el(id).title=coverageHelp;
@@ -146,7 +146,7 @@ function exportAssignmentRows(){
 function initializeAnalysisControls(){
  for(const [c,m] of [['cohortSelect','stateMode'],['panelCohortSelect','panelStateMode']]){
   el(c).onchange=()=>changeAnalysis(el(c).value,activeStateMode).catch(e=>{syncAnalysisControls();datasetMessage(e.message)});
-  el(m).onchange=()=>changeAnalysis(activeCohort,el(m).value).catch(e=>{syncAnalysisControls();datasetMessage(e.message)});
+  el(m).onchange=()=>changeAnalysis(activeCohort,el(m).checked?'merged':'pure').catch(e=>{syncAnalysisControls();datasetMessage(e.message)});
  }
  el('coverage').onchange=()=>{if(activeCohort!=='all'||activeStateMode!=='pure')return changeAnalysis();draw();if(typeof saveDatasetNavigation==='function')saveDatasetNavigation()};
  el('exportAssignments').onclick=()=>{const rows=exportAssignmentRows(),text=rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n');const url=URL.createObjectURL(new Blob([text],{type:'text/csv'})),a=document.createElement('a');a.href=url;a.download=`${META.id}_${activeCohort}_merged_${el('coverage').value}_assignments.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
