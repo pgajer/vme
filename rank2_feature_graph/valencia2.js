@@ -1,10 +1,5 @@
 // Additive, pinned annotations. No classifications or embeddings are computed here.
-// Share this exact control node between the ordinary and maximized sidebars.
-function moveValenciaControls(){
- const section=el('participantSection');
- section.parentElement.insertBefore(el('valenciaColorControls'),section);
-}
-if(el('participantSection').parentElement)moveValenciaControls();
+// The shared color selector stays in the sample header in normal and maximized views.
 const valenciaSubtypeColors={'I-A':'#ff6868','I-B':'#ffd4da','II':'#b4ff68','III-A':'#ffbc6b','III-B':'#e4a67b','IV-A':'#c1adec','IV-B':'#91a8ed','IV-C0':'#989898','IV-C1':'#ffc0cb','IV-C2':'#a8e5e5','IV-C3':'#9acc9a','IV-C4':'#800080','V':'#ffff71'};
 const valenciaCstColors={'I':'#df5555','II':'#64a52d','III':'#ed993b','IV-A':'#9a7bc4','IV-B':'#5477c7','IV-C':'#737373','V':'#b6a616'};
 // Color identities are independent of graph selection and fitted coordinates.

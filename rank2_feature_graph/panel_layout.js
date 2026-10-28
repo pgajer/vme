@@ -191,7 +191,6 @@ var selectionPanelLayoutSync=null;
    if(maximized?.id==='samplePanel')participantHost.appendChild(participantSection);
    else participantHost.insertBefore(participantSection,document.getElementById('layoutControls'));
   }
-  if(typeof moveValenciaControls==='function')moveValenciaControls();
   const datasetLabel=document.getElementById(maximized?.id==='samplePanel'?'panelDatasetSelect':'datasetSelect').closest('label');
   datasetLabel.after(document.getElementById('populationComparisonControl'));
   datasetLabel.after(document.getElementById('datasetMethodsPanel'));
