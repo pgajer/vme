@@ -45,7 +45,7 @@ def validate(bank):
         if 'vertices' in release:
             vertices = release['vertices']
             require(len(vertices) == len(nodes) and {v['id'] for v in vertices} == nodes, 'vertex identities differ')
-            require(release['vertexTestFamilySize'] == 2*len(nodes), 'incorrect vertex test family')
+            require(release['vertexTestFamilySize'] == (bank['vertexMultiplicity']['familySize'] if bank.get('vertexMultiplicity') else 2*len(nodes)), 'incorrect vertex test family')
             for vertex in vertices:
                 incident = [e for e in release['edges'] if vertex['id'] in (e['from'], e['to'])]
                 require(len(vertex['incidentEdges']) == len(incident) and set(vertex['incidentEdges']) == {e['id'] for e in incident}, 'incident states differ')
@@ -71,6 +71,45 @@ def validate(bank):
                     require(v is None or v in ['-Infinity', 'Infinity'] or (isinstance(v, (int,float)) and math.isfinite(v)), 'invalid log odds')
                 if exact['supported']:
                     require(exact['sets'] > 0 and all(exact[k] is not None for k in ['p','holm','by','logOR','low','high']), 'supported test is incomplete')
+    if bank.get('vertexMultiplicity'):
+        family = bank['vertexMultiplicity']
+        require(family.get('version') == 1 and family.get('scope') == 'all-coverages-unique-vertex-cohort'
+                and family.get('coverages') == [60,70,80,90], 'unknown vertex adjustment scope')
+        groups = {}
+        raw = 0
+        for q in COVERAGES:
+            require('vertices' in bank['coverages'][q], 'joint family requires all vertices')
+            for v in bank['coverages'][q]['vertices']:
+                for c in COHORTS:
+                    x = v['results'][c]['exact']
+                    key = x.get('analysisId', '')
+                    require(len(key) == 64 and all(t in '0123456789abcdef' for t in key), 'missing analysis identity')
+                    groups.setdefault(key, []).append((int(q), v['id'], v['name'], c, x))
+                    raw += 1
+        m = len(groups)
+        require(family['familySize'] == m and family['displayedTests'] == raw
+                and family['duplicateTests'] == raw-m, 'joint vertex family size differs')
+        require(family['unavailableTests'] == sum(not g[0][4]['supported'] for g in groups.values()), 'unavailable test count differs')
+        for entries in groups.values():
+            first = entries[0]
+            qs = sorted(e[0] for e in entries)
+            require(len(set(qs)) == len(qs), 'duplicate analysis within coverage')
+            for e in entries:
+                require(e[1:4] == first[1:4] and e[4] == first[4], 'identical analyses disagree')
+                require(e[4].get('identicalCoverages') == qs, 'identical coverage labels differ')
+        # Independently validate both corrections on unique tests, including unavailable p=1.
+        tests = sorted((e[0][4] for e in groups.values()), key=lambda x:x['p'] if x['supported'] else 1)
+        h = sum(1/i for i in range(1,m+1))
+        holm, by = 0., 1.
+        for i, x in enumerate(tests):
+            holm = min(1., max(holm, (m-i)*(x['p'] if x['supported'] else 1)))
+            if x['supported']:
+                require(math.isclose(x['holm'], holm, abs_tol=1e-12), 'joint Holm value differs')
+        for i in range(m-1,-1,-1):
+            x = tests[i]
+            by = min(by, (x['p'] if x['supported'] else 1)*m*h/(i+1), 1.)
+            if x['supported']:
+                require(math.isclose(x['by'], by, abs_tol=1e-12), 'joint BY value differs')
     return bank
 
 

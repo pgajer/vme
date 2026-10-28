@@ -54,22 +54,30 @@ The binary union-versus-rest analysis uses the same original matched sets and
 exact procedure as the edge analysis. It is computed from participant membership,
 never by averaging edge odds ratios or p-values. Descriptive counts use all
 approved enrollment women; exact results use the original matched subset.
-Holm and BY adjustments form a **separate vertex family**, including every
-reference vertex in both cohorts at that coverage. Unavailable tests contribute
-p = 1 to the correction family but remain displayed as unavailable. The family
-does not change when searching the table or showing one cohort. It does not
-correct jointly for inspecting edges, vertices and multiple coverage levels.
+The current supplement uses **one vertex family across 60%, 70%, 80% and 90%**,
+with both cohorts included. Its 102 displayed rows represent 84 unique
+vertex–cohort matched analyses; 18 repeats are counted once. Identity requires
+the same vertex, cohort, matched specimens, outcomes, original matched sets
+and binary union-membership indicators. Equal counts or p-values alone are
+not sufficient. Two unavailable unique tests contribute p = 1 but remain
+displayed as unavailable. The family does not change when filtering the table
+or showing one cohort. It excludes edge tests, other outcomes and other
+analysis branches. Older supplements retain their explicitly labeled
+within-coverage families. Holm and BY accommodate dependent tests; repeated
+coverage results are sensitivity checks, not independent replications.
 
 Vertex colors use the same ratio scale as edge mode; edges become neutral
 context. Click a vertex or its label, or a table row, to compare cohorts. A dark
 outline identifies the selected vertex and its incident edges. Unions that
 provide no informative matched sets have no estimable matched odds ratio.
-The CSV identifies the association level and all incident state IDs.
+The CSV identifies the association level, incident state IDs, adjustment scope,
+unique analysis identity and coverage levels that repeat that analysis.
 
 ## Distribution
 
 Software sources contain no study-result payload. The private development build
-accepts `--association-supplement PATH` (default `enrollment_associations_graphs_v1.json` when installed, then
+accepts `--association-supplement PATH` (default `enrollment_associations_joint_vertices_v2.json` when installed, then
+`enrollment_associations_graphs_v1.json`, then
 `enrollment_associations_vertices_v1.json`, otherwise
 `enrollment_associations.json`).
 It validates and packages aggregate results into immutable assets loaded with
@@ -82,7 +90,7 @@ of the installation's metadata (preserving every existing supplement):
 
 ```sh
 python3 scripts/association_supplement.py \
-  --supplement /path/to/enrollment_associations_graphs_v1.json \
+  --supplement /path/to/enrollment_associations_joint_vertices_v2.json \
   --metadata /path/to/current-metadata.json \
   --output /path/to/metadata-with-associations.json
 python3 scripts/portable.py update --metadata /path/to/metadata-with-associations.json
@@ -117,6 +125,18 @@ It uses serial Poisson-binomial convolution, inclusive doubled-tail tests and
 bisection for conditional estimates and equal-tail limits. No embeddings or
 assignments are recomputed. The preparation source hash is recorded alongside
 the unchanged reference and ledger hashes. The output path must be new.
+
+For the joint family, run `adjust_vertex_associations.py --supplement OLD_JSON
+--results RESULTS_ROOT --output NEW_JSON` on the preserved graph supplement.
+This verifies frozen ledgers and union membership, reuses all saved raw tests,
+and applies Holm and BY once to the unique analyses. It preserves graph
+layouts, raw p-values, estimates, intervals, counts and every edge result.
+The new JSON must not already exist. Both Python and browser validators
+check family size, duplicate metadata, duplicate-result agreement, and
+recompute the correction formulas from the unique saved p-values.
+`test_vertex_multiplicity.py` additionally compares the results with R p.adjust.
+`summarize_vertex_associations.py` creates a fresh HTML/CSV/figure summary
+from the old and new supplements; it performs no fitting.
 
 Only aggregates, reference topology, release names and source hashes are
 exported. No participant IDs, specimen IDs, outcomes per participant or covariates

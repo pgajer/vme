@@ -98,3 +98,30 @@ if(fs.existsSync(verticesActual)){
  console.log('Actual vertex rows validated:',Object.values(real.coverages).reduce((n,r)=>n+2*r.vertices.length,0));
 }
 console.log('Vertex selection, neutral context edges, union denominators, separate corrections, CSV, all coverage/cohort modes and old-supplement compatibility passed.');
+
+// Cross-coverage family: explicitly repeat one vertex/cohort analysis across levels.
+const joint=structuredClone(bank),identities=new Map();let displayed=0;
+for(const [q,r] of Object.entries(joint.coverages))for(const v of r.vertices)for(const c of ['ZAPPS','PreSSMat']){
+ const x=v.results[c].exact,key=v.id==='0'?v.id+c:v.id+c+q;
+ if(!identities.has(key))identities.set(key,{id:(identities.size+1).toString(16).padStart(64,'0'),qs:[],xs:[]});
+ const g=identities.get(key);g.qs.push(Number(q));g.xs.push(x);displayed++;
+}
+for(const g of identities.values())for(const x of g.xs){x.analysisId=g.id;x.identicalCoverages=g.qs;if(x.supported){x.holm=1;x.by=1}}
+joint.vertexMultiplicity={version:1,scope:'all-coverages-unique-vertex-cohort',coverages:[60,70,80,90],familySize:identities.size,displayedTests:displayed,duplicateTests:displayed-identities.size,unavailableTests:[...identities.values()].filter(g=>!g.xs[0].supported).length};
+for(const r of Object.values(joint.coverages))r.vertexTestFamilySize=identities.size;
+ctx.validateAssociationBank(joint);
+for(const mutate of [b=>b.vertexMultiplicity.familySize++,b=>b.vertexMultiplicity.duplicateTests++,b=>b.coverages['60'].vertices[0].results.ZAPPS.exact.identicalCoverages=[60],b=>b.coverages['90'].vertices[1].results.ZAPPS.exact.holm=.001]){
+ const bad=structuredClone(joint);mutate(bad);assert.throws(()=>ctx.validateAssociationBank(bad));
+}
+ctx.joint=joint;vm.runInContext("associationView.bank=joint;associationView.filter='';associationView.level='vertex'",ctx);
+for(const q of ['60','70','80','90'])for(const cohort of ['both','ZAPPS','PreSSMat']){
+ ctx.q=q;ctx.cohort=cohort;vm.runInContext("Object.assign(associationView,{coverage:q,cohort,mode:'matched'});renderAssociations()",ctx);
+ assert.match(el('associationMethod').textContent,/unique vertex–cohort analyses across 60%, 70%, 80% and 90%/);
+ const csv=ctx.associationCSV();assert.match(csv,/adjustment_scope/);assert.match(csv,/all-coverages-unique-vertex-cohort/);
+}
+vm.runInContext("associationView.level='edge';renderAssociations()",ctx);
+assert.match(el('associationMethod').textContent,/saved edge family/);
+assert(!ctx.associationCSV().includes('all-coverages-unique-vertex-cohort'));
+const jointActual=new URL('enrollment_associations_joint_vertices_v2.json',import.meta.url);
+if(fs.existsSync(jointActual))ctx.validateAssociationBank(JSON.parse(fs.readFileSync(jointActual)));
+console.log('Joint-family validation, legacy compatibility, all coverage/cohort rendering and CSV scope checks passed.');

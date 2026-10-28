@@ -20,7 +20,7 @@ function validateAssociationBank(bank){
    }
    for(const e of r.edges)require(nodes.has(e.from)&&nodes.has(e.to)&&e.from!==e.to,'unknown endpoint');
    if(r.vertices){
-    require(r.vertices.length===nodes.size&&new Set(r.vertices.map(v=>v.id)).size===nodes.size&&r.vertexTestFamilySize===2*nodes.size,'vertex reference size differs');
+    require(r.vertices.length===nodes.size&&new Set(r.vertices.map(v=>v.id)).size===nodes.size&&r.vertexTestFamilySize===(bank.vertexMultiplicity?bank.vertexMultiplicity.familySize:2*nodes.size),'vertex reference size differs');
     for(const v of r.vertices){
      require(nodes.has(v.id),'unknown vertex');
      const incident=r.edges.filter(e=>e.from===v.id||e.to===v.id);
@@ -37,7 +37,44 @@ function validateAssociationBank(bank){
    }
   }
  }
+ if(bank.vertexMultiplicity)validateVertexMultiplicity(bank,require);
  return bank;
+}
+function validateVertexMultiplicity(bank,require){
+ const f=bank.vertexMultiplicity,groups=new Map();let raw=0;
+ require(f.version===1&&f.scope==='all-coverages-unique-vertex-cohort'&&JSON.stringify(f.coverages)==='[60,70,80,90]','unknown vertex adjustment scope');
+ for(const q of ['60','70','80','90']){
+  require(Array.isArray(bank.coverages[q].vertices),'joint family requires all vertices');
+  for(const v of bank.coverages[q].vertices)for(const c of ['ZAPPS','PreSSMat']){
+   const x=v.results[c].exact,key=x.analysisId;require(/^[a-f0-9]{64}$/.test(key||''),'missing analysis identity');
+   if(!groups.has(key))groups.set(key,[]);groups.get(key).push({q:Number(q),id:v.id,name:v.name,c,x});raw++;
+  }
+ }
+ const m=groups.size;
+ require(f.familySize===m&&f.displayedTests===raw&&f.duplicateTests===raw-m,'joint vertex family size differs');
+ require(f.unavailableTests===[...groups.values()].filter(g=>!g[0].x.supported).length,'unavailable test count differs');
+ for(const entries of groups.values()){
+  const first=entries[0],qs=entries.map(e=>e.q).sort((a,b)=>a-b);
+  require(new Set(qs).size===qs.length,'duplicate analysis within coverage');
+  for(const e of entries){
+   require(e.id===first.id&&e.name===first.name&&e.c===first.c&&['supported','sets','logOR','low','high','p','holm','by'].every(k=>e.x[k]===first.x[k]),'identical analyses disagree');
+   require(JSON.stringify(e.x.identicalCoverages)===JSON.stringify(qs),'identical coverage labels differ');
+  }
+ }
+ const tests=[...groups.values()].map(g=>g[0].x).sort((a,b)=>(a.supported?a.p:1)-(b.supported?b.p:1));
+ let holm=0,by=1;const harmonic=Array.from({length:m},(_,i)=>1/(i+1)).reduce((a,b)=>a+b,0);
+ for(let i=0;i<m;i++){const x=tests[i];holm=Math.min(1,Math.max(holm,(m-i)*(x.supported?x.p:1)));if(x.supported)require(Math.abs(x.holm-holm)<1e-10,'joint Holm value differs')}
+ for(let i=m-1;i>=0;i--){const x=tests[i];by=Math.min(by,(x.supported?x.p:1)*m*harmonic/(i+1),1);if(x.supported)require(Math.abs(x.by-by)<1e-10,'joint BY value differs')}
+}
+function associationAdjustmentScope(){
+ return associationView.level==='vertex'&&associationView.bank.vertexMultiplicity?'all-coverages-unique-vertex-cohort':'within-coverage';
+}
+function associationAdjustmentDescription(release){
+ if(associationAdjustmentScope()==='all-coverages-unique-vertex-cohort'){
+  const f=associationView.bank.vertexMultiplicity;
+  return 'Holm and Benjamini–Yekutieli (BY) adjustments use one family of '+f.familySize+' unique vertex–cohort analyses across 60%, 70%, 80% and 90% coverage. '+f.displayedTests+' displayed tests include '+f.duplicateTests+' repeated analyses, counted once using identical matched membership and model inputs. Unavailable tests count as p = 1. This family excludes edge tests, other outcomes and analysis branches.';
+ }
+ return 'Holm and Benjamini–Yekutieli (BY) adjustments use '+(associationView.level==='vertex'?'a separate vertex family':'the saved edge family')+' of '+associationFamily(release)+' cohort-'+(associationView.level==='vertex'?'vertex':'state')+' tests at this coverage. They do not cover searching across coverage levels, other outcomes or analyses.';
 }
 function associationNumber(x,digits=2){if(x===null||x===undefined||Number.isNaN(Number(x)))return 'Unavailable';if(Number(x)===Infinity)return '∞';if(Number(x)===-Infinity)return '−∞';if(Number(x)>0&&Number(x)<10**(-digits))return Number(x).toExponential(2);return Number(x).toLocaleString(undefined,{maximumFractionDigits:digits})}
 function associationOR(x){return x===null?null:Math.exp(Number(x))}
@@ -126,8 +163,8 @@ function renderAssociations(){
   const values=[cohort,v.n,v.cases,v.n-v.cases,v.n?associationNumber(100*v.cases/v.n):'—',associationNumber(v.expected),estimate,...(matched?[x.sets,...['p','holm','by'].map(k=>x.supported?associationNumber(x[k],4):'Unavailable')]:[])];
   return `<tr class="${edge.id===associationView.selected?'selected':''}"><th scope="row"><button data-association-edge="${esc(edge.id)}" aria-pressed="${edge.id===associationView.selected}">${esc(edge.name.replaceAll('_',' '))}</button></th>${values.map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`;
  }).join('')}</tbody></table>`;
- el('associationMethod').textContent=matched?`Exact conditional ${vertexMode?'incident-state-union':'state'}-versus-rest odds ratios preserve original matched sets; expected cases sum each set’s ${vertexMode?'union':'state'} membership fraction. Counts use only that same matched subset (ZAPPS ${r.cohorts.ZAPPS.matchedN} women; PreSSMat ${r.cohorts.PreSSMat.matchedN}). Holm and Benjamini–Yekutieli (BY) adjustments use ${vertexMode?'a separate vertex family':'the saved edge family'} of ${associationFamily(r)} cohort-${entity} tests at this coverage. They do not cover searching across coverage levels, other outcomes or analyses. Zero/infinite odds and unbounded intervals are retained; unavailable tests are not zero effects.`:`Expected cases = women in the ${vertexMode?'incident-state union':'state'} × the cohort case fraction among all approved enrollment women. No hypothesis test or adjusted p-value is attached to this descriptive comparison. This population differs from the original informative matched-set subset.`;
- el('associationProvenance').textContent=`${r.status}\nRelease: ${r.sourceRelease}\nGraph: ${r.graphId}\nPartition: ${r.partitionId}\nEnrollment ledger SHA-256: ${r.membershipSha256}\n${vertexMode?'Vertex analysis: '+JSON.stringify(r.vertexAnalysis)+'\n':''}${Object.entries(r.sources).map(([name,hash])=>name+': '+hash).join('\n')}`;
+ el('associationMethod').textContent=matched?`Exact conditional ${vertexMode?'incident-state-union':'state'}-versus-rest odds ratios preserve original matched sets; expected cases sum each set’s ${vertexMode?'union':'state'} membership fraction. Counts use only that same matched subset (ZAPPS ${r.cohorts.ZAPPS.matchedN} women; PreSSMat ${r.cohorts.PreSSMat.matchedN}). ${associationAdjustmentDescription(r)} Zero/infinite odds and unbounded intervals are retained; unavailable tests are not zero effects.`:`Expected cases = women in the ${vertexMode?'incident-state union':'state'} × the cohort case fraction among all approved enrollment women. No hypothesis test or adjusted p-value is attached to this descriptive comparison. This population differs from the original informative matched-set subset.`;
+ el('associationProvenance').textContent=`${r.status}\nRelease: ${r.sourceRelease}\nGraph: ${r.graphId}\nPartition: ${r.partitionId}\nEnrollment ledger SHA-256: ${r.membershipSha256}\n${vertexMode?'Vertex analysis: '+JSON.stringify({analysis:r.vertexAnalysis,multiplicity:associationView.bank.vertexMultiplicity||null})+'\n':''}${Object.entries(r.sources).map(([name,hash])=>name+': '+hash).join('\n')}`;
  el('associationDetail').textContent='Selected '+entity+': '+selected.name.replaceAll('_',' ')+(vertexMode?' · Union of '+selected.incidentEdges.length+' incident states':'')+' · '+cohorts.map(c=>{const v=selected.results[c][matched?'matched':'all'],x=selected.results[c].exact;return c+': '+v.cases+' cases / '+v.n+' women; '+associationNumber(v.expected)+' expected'+(matched?'; OR '+(x.supported?associationNumber(associationOR(x.logOR))+' (95% CI '+associationNumber(associationOR(x.low))+'–'+associationNumber(associationOR(x.high))+')':'unavailable'):'')}).join(' · ');
  for(const button of el('associationWorkspace').querySelectorAll('[data-association-edge]')){
   button.onclick=()=>associationChoose(button.dataset.associationEdge);
@@ -136,8 +173,8 @@ function renderAssociations(){
 }
 function associationCSV(){
  const r=associationView.bank.coverages[associationView.coverage],cohorts=associationView.cohort==='both'?['ZAPPS','PreSSMat']:[associationView.cohort],matched=associationView.mode==='matched';
- const header=['coverage','graph_id','partition_id','outcome','window','population',associationView.level==='vertex'?'vertex_id':'state_id',associationView.level==='vertex'?'vertex':'state','cohort','women','cases','controls','expected_cases','observed_expected','odds_ratio','ci_low','ci_high','informative_sets','p','holm_p','by_p','test_family_size','association_level','incident_state_ids'];
- const rows=associationRows(r,cohorts,associationView.filter).map(({edge,cohort,result})=>{const v=result[matched?'matched':'all'],x=result.exact;return [r.coverage,r.graphId,r.partitionId,associationView.bank.outcome,associationView.bank.window,matched?'original_matched_sets':'all_approved_enrollment',edge.id,edge.name,cohort,v.n,v.cases,v.n-v.cases,v.expected,v.expected?v.cases/v.expected:null,...(matched?[...['logOR','low','high'].map(k=>x.supported?associationOR(x[k]):null),x.sets,...['p','holm','by'].map(k=>x.supported?x[k]:null),associationFamily(r)]:Array(8).fill(null)),associationView.level,(edge.incidentEdges||[edge.id]).join(';')]});
+ const header=['coverage','graph_id','partition_id','outcome','window','population',associationView.level==='vertex'?'vertex_id':'state_id',associationView.level==='vertex'?'vertex':'state','cohort','women','cases','controls','expected_cases','observed_expected','odds_ratio','ci_low','ci_high','informative_sets','p','holm_p','by_p','test_family_size','association_level','incident_state_ids','adjustment_scope','analysis_id','identical_coverages'];
+ const rows=associationRows(r,cohorts,associationView.filter).map(({edge,cohort,result})=>{const v=result[matched?'matched':'all'],x=result.exact;return [r.coverage,r.graphId,r.partitionId,associationView.bank.outcome,associationView.bank.window,matched?'original_matched_sets':'all_approved_enrollment',edge.id,edge.name,cohort,v.n,v.cases,v.n-v.cases,v.expected,v.expected?v.cases/v.expected:null,...(matched?[...['logOR','low','high'].map(k=>x.supported?associationOR(x[k]):null),x.sets,...['p','holm','by'].map(k=>x.supported?x[k]:null),associationFamily(r)]:Array(8).fill(null)),associationView.level,(edge.incidentEdges||[edge.id]).join(';'),matched?associationAdjustmentScope():null,matched?x.analysisId:null,matched?(x.identicalCoverages||[]).join(';'):null]});
  const quote=v=>'"'+String(v??'').replaceAll('"','""')+'"';return [header,...rows].map(row=>row.map(quote).join(',')).join('\r\n');
 }
 function installAssociations(){
